@@ -380,7 +380,12 @@ main {
 }
 .controls {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
+}
+.panel,
+.readout {
+  min-width: 0;
 }
 .slider {
   display: grid;

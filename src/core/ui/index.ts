@@ -10,3 +10,4 @@ export * from './theme';
 export * from './useAnimation';
 export * from './format';
 export * from './useHashParam';
+export * from './view3d';
