@@ -50,12 +50,12 @@ export function Derivation() {
           tex="M^2=\begin{bmatrix}a^2+bc & ab-ab\\ ca-ac & bc+a^2\end{bmatrix}=(a^2+bc)\,I=-I"
         />
       </Step>
-      <Step title="Kuvvetler iki değer arasında döner" why="M² = −I’yi tekrar tekrar uygula: M^{2k} = (M²)^k = (−I)^k ve M^{2k+1} = M^{2k}·M.">
+      <Step title="Kuvvetler iki değer arasında döner" why="M² = −I’yi tekrar tekrar uygula: M²ᵏ = (M²)^k = (−I)^k ve M²ᵏ⁺¹ = M²ᵏ·M.">
         <Tex block tex="M^{2k}=(-1)^k I,\qquad M^{2k+1}=(-1)^k M" />
       </Step>
       <Step
         title="Üstel seriyi çift ve tek terimlere ayır"
-        why="Tanım e^{X} = Σ X^n/n!. Kuvvetler Adım 5’ten geliyor. Kalan iki toplam tam olarak cos t ve sin t’nin Taylor serileri. Seri her matris için mutlak yakınsadığından terimleri yeniden gruplamak serbest."
+        why="Tanım eˣ = Σ X^n/n!. Kuvvetler Adım 5’ten geliyor. Kalan iki toplam tam olarak cos t ve sin t’nin Taylor serileri. Seri her matris için mutlak yakınsadığından terimleri yeniden gruplamak serbest."
       >
         <Tex
           block
@@ -70,20 +70,20 @@ export function Derivation() {
       </Step>
       <Step
         title="Üstel de aynı şekilde taşınır, yörünge bir elipstir"
-        why="(PJP⁻¹)ⁿ = P Jⁿ P⁻¹ (aradaki P⁻¹P’ler sadeleşir); bunu seriye uygula. e^{tJ} çemberde döndürür; P doğrusal bir dönüşüm olduğundan çemberi elipse götürür."
+        why="(PJP⁻¹)ⁿ = P Jⁿ P⁻¹ (aradaki P⁻¹P’ler sadeleşir); bunu seriye uygula. eᵗᴶ çemberde döndürür; P doğrusal bir dönüşüm olduğundan çemberi elipse götürür."
       >
         <Tex block tex="e^{tM}=P\,e^{tJ}P^{-1},\qquad e^{tM}x_0=P\begin{bmatrix}\cos t&-\sin t\\ \sin t&\cos t\end{bmatrix}P^{-1}x_0" />
         <Tex block tex="e^{tM}e_1=\cos t\,e_1+\sin t\,Me_1=\cos t\begin{bmatrix}1\\0\end{bmatrix}+\sin t\begin{bmatrix}a\\c\end{bmatrix}" />
       </Step>
       <Step
         title="Benzerlik akışı ve komütatör"
-        why="A(t) = e^{tM} A e^{−tM} çarpım kuralıyla türetilir; (e^{tM})' = M e^{tM} = e^{tM} M ve (e^{−tM})' = −e^{−tM} M."
+        why="A(t) = eᵗᴹ A e⁻ᵗᴹ çarpım kuralıyla türetilir; (eᵗᴹ)' = M eᵗᴹ = eᵗᴹ M ve (e⁻ᵗᴹ)' = −e⁻ᵗᴹ M."
       >
         <Tex block tex="\dot A(t)=M\,A(t)-A(t)\,M=[M,A(t)],\qquad \dot A(0)=[M,A]" />
       </Step>
       <Step
         title="A’yı dönmeyen ve dönen parçalara ayır"
-        why="A_c = (A − MAM)/2 için M·A_c = (MA + AM)/2 = A_c·M (M² = −I kullanıldı). A_a = (A + MAM)/2 için aynı hesap M·A_a = −A_a·M verir. Ters değişmeli parçada M^k A_a = A_a(−M)^k olduğundan e^{tM}A_a = A_a e^{−tM}."
+        why="A_c = (A − MAM)/2 için M·A_c = (MA + AM)/2 = A_c·M (M² = −I kullanıldı). Aₐ = (A + MAM)/2 için aynı hesap M·Aₐ = −Aₐ·M verir. Ters değişmeli parçada M^k Aₐ = Aₐ(−M)^k olduğundan eᵗᴹAₐ = Aₐ e⁻ᵗᴹ."
       >
         <Tex block tex="A=A_c+A_a,\qquad A_c=\tfrac12(A-MAM),\quad A_a=\tfrac12(A+MAM)" />
         <Tex block tex="A(t)=A_c+e^{tM}A_a e^{-tM}=A_c+e^{2tM}A_a,\qquad [M,A]=2MA_a" />
@@ -96,7 +96,7 @@ export function Derivation() {
       </Step>
       <Step
         title="4×4: kuaterniyonla soldan çarpma"
-        why="Kuaterniyon çarpımı birleşmeli olduğundan L_{pq} = L_p L_q. Saf bir n = n₁i + n₂j + n₃k için nn = −(n·n) + n×n = −|n|². Birim n alınca n² = −1 bulunur."
+        why="Kuaterniyon çarpımı birleşmeli olduğundan L_pq = L_p L_q. Saf bir n = n₁i + n₂j + n₃k için nn = −(n·n) + n×n = −|n|². Birim n alınca n² = −1 bulunur."
       >
         <Tex block tex="M_n=n_1L_i+n_2L_j+n_3L_k=L_n,\qquad M_n^2=L_{n^2}=L_{-1}=-I_4" />
         <Tex block tex="e^{tM_n}=\cos t\,I_4+\sin t\,M_n=L_{\cos t+n\sin t}" />

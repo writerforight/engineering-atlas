@@ -21,7 +21,7 @@ export function niceTicks(min: number, max: number, count = 5): number[] {
   const raw = (max - min) / Math.max(1, count);
   const mag = 10 ** Math.floor(Math.log10(raw));
   const norm = raw / mag;
-  const step = (norm >= 5 ? 10 : norm >= 2 ? 5 : norm >= 1 ? 2 : 1) * mag;
+  const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
   const start = Math.ceil(min / step - 1e-9) * step;
   const ticks: number[] = [];
   for (let v = start; v <= max + step * 1e-9; v += step) ticks.push(Math.abs(v) < step * 1e-9 ? 0 : v);

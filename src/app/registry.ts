@@ -3,9 +3,9 @@ import { buildRegistry } from './buildRegistry';
 
 // Adding a folder under src/topics/ is all it takes to register a topic.
 export const topics = buildRegistry(
-  import.meta.glob<{ meta: TopicMeta }>('../topics/*/meta.ts', { eager: true }),
-  import.meta.glob<VizModule>('../topics/*/Viz.tsx'),
-  import.meta.glob<TheoryModule>('../topics/*/Theory.tsx'),
+  import.meta.glob<{ meta: TopicMeta }>(['../topics/*/meta.ts', '!../topics/_*/**'], { eager: true }),
+  import.meta.glob<VizModule>(['../topics/*/Viz.tsx', '!../topics/_*/**']),
+  import.meta.glob<TheoryModule>(['../topics/*/Theory.tsx', '!../topics/_*/**']),
 );
 
 export function findTopic(slug: string) {

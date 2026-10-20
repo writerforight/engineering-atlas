@@ -89,7 +89,7 @@ export default function Viz() {
         value={tab}
         onChange={setTab}
         items={[
-          { id: 'structure', label: '2×2: M² = −I ve e^{tM}' },
+          { id: 'structure', label: '2×2: M² = −I ve eᵗᴹ' },
           { id: 'similarity', label: 'Benzerlik ve [M, A]' },
           { id: 'quaternion', label: '4×4: kuaterniyonlar' },
         ]}
@@ -185,7 +185,7 @@ function StructureTab({ a, b, setA, setB, t }: AbProps & { t: number }) {
       polyline(ctx, vp, ellipse, pal.c1, 2.2);
       arrow(ctx, vp, [0, 0], [x0[0]!, x0[1]!], pal.axis, 1.5);
       arrow(ctx, vp, [0, 0], [xt[0]!, xt[1]!], pal.c1, 2.5);
-      label(ctx, vp, [xt[0]!, xt[1]!], 'e^{tM}x₀', pal.c1);
+      label(ctx, vp, [xt[0]!, xt[1]!], 'eᵗᴹx₀', pal.c1);
     },
     [R, P, showJ, r, yt, ellipse, x0, xt],
   );

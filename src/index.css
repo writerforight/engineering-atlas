@@ -300,10 +300,12 @@ main {
 .steps {
   counter-reset: step;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   max-width: 76ch;
 }
 .step {
+  min-width: 0;
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -466,6 +468,11 @@ main {
 }
 .readout .katex {
   font-size: 1.05em;
+}
+.readout .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0.4em 0;
 }
 .mat-table {
   font-family: var(--mono);
