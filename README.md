@@ -17,12 +17,14 @@ Every topic page follows the same order:
 
 ![M² = −I topic](docs/screenshot-complex-structure.png)
 ![Laplace topic](docs/screenshot-laplace.png)
+![Skew-symmetric topic](docs/screenshot-skew-symmetric.png)
 
 ## Topics
 
 | Slug | What it shows |
 | --- | --- |
 | `complex-structure` | Real 2×2 matrices with M² = −I, `e^{tM} = cos t I + sin t M`, elliptic orbits as `P e^{tJ} P⁻¹`, the similarity flow `e^{tM} A e^{−tM}` and `[M, A]`, and the 4×4 quaternion case (a whole S² of complex structures). |
+| `skew-symmetric` | Vector → skew matrix (`[ω]×` in 3D, one number per coordinate plane in n-D, n = 2…6), real normal form `Q·blockdiag(λⱼJ)·Qᵀ`, how `Kᵏ` squashes the unit sphere onto the dominant plane (semi-axes `λⱼᵏ`, 90° per power), and `e^{tK}` as a pure rotation. |
 | `laplace-integration` | `L{∫f} = F(s)/s`, the damped integrand `g(t)e^{−σt}`, the σ → 0 limit `1/(jω) + πF(0)δ(ω)`, ROC warnings, causal signal vs causal system. |
 
 ## Development
@@ -43,7 +45,7 @@ Node 22 is used in CI.
 src/
   core/
     math/      pure TS, no UI: matrices, expm, complex numbers, quaternions,
-               quadrature, causal test signals (+ *.test.ts)
+               quadrature, causal test signals, skew matrices (+ *.test.ts)
     ui/        shared React pieces: Canvas, Slider, Tex (KaTeX), Tabs,
                Callout, Step/Steps, plot + draw helpers, theme
     topic.ts   TopicMeta / TheoryModule types
@@ -51,6 +53,7 @@ src/
   topics/
     _template/             copy this to start a new topic (ignored by the registry)
     complex-structure/     meta.ts · Viz.tsx · Theory.tsx
+    skew-symmetric/        meta.ts · Viz.tsx · Theory.tsx
     laplace-integration/   meta.ts · Viz.tsx · Theory.tsx
 ```
 

@@ -516,3 +516,46 @@ footer {
   font-size: 13px;
   padding: 20px 0 32px;
 }
+
+/* ---- vector component inputs ---- */
+.vec-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 6px 10px;
+}
+.vec-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+.vec-input span {
+  min-width: 2.4em;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.vec-input input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 8px;
+  font: inherit;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  background: var(--bg);
+  color: var(--fg);
+}
+.vec-input input:focus {
+  outline: 2px solid var(--c1);
+  outline-offset: -1px;
+}
+.controls > *,
+.readout > * {
+  min-width: 0;
+}
+.readout > div {
+  overflow-x: auto;
+  overflow-y: hidden;
+}

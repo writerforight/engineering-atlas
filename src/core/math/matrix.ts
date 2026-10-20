@@ -173,3 +173,64 @@ export function eig2(A: Mat): [[number, number], [number, number]] {
 
 /** Rotation generator J = [[0,-1],[1,0]]; e^{tJ} rotates counter-clockwise by t. */
 export const J2: Mat = mat2(0, -1, 1, 0);
+
+// ---- n x n helpers -------------------------------------------------------
+
+/** A^k for an integer k >= 0 (repeated multiplication; k is small here). */
+export function matPow(A: Mat, k: number): Mat {
+  let P = identity(rows(A));
+  for (let i = 0; i < k; i++) P = mul(P, A);
+  return P;
+}
+
+/**
+ * Eigen-decomposition of a symmetric matrix by cyclic Jacobi rotations:
+ * A = V diag(values) V^T with orthonormal columns in V, values descending.
+ * Each rotation zeroes one off-diagonal pair; sweeps repeat until the
+ * off-diagonal mass is at round-off level.
+ */
+export function symEig(A: Mat): { values: number[]; vectors: Mat } {
+  const n = rows(A);
+  const S = clone(A);
+  const V = identity(n);
+  const scaleRef = Math.max(norm(A), 1e-300);
+  for (let sweep = 0; sweep < 100; sweep++) {
+    let off = 0;
+    for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) off += get(S, p, q) ** 2;
+    if (Math.sqrt(off) <= 1e-15 * scaleRef) break;
+    for (let p = 0; p < n; p++) {
+      for (let q = p + 1; q < n; q++) {
+        const apq = get(S, p, q);
+        if (apq === 0) continue;
+        // tan(2θ) = 2 a_pq / (a_qq − a_pp); take the smaller root for stability.
+        const theta = (get(S, q, q) - get(S, p, p)) / (2 * apq);
+        const t = Math.sign(theta || 1) / (Math.abs(theta) + Math.sqrt(theta * theta + 1));
+        const c = 1 / Math.sqrt(t * t + 1);
+        const s = t * c;
+        for (let k = 0; k < n; k++) {
+          const skp = get(S, k, p);
+          const skq = get(S, k, q);
+          S[k]![p] = c * skp - s * skq;
+          S[k]![q] = s * skp + c * skq;
+        }
+        for (let k = 0; k < n; k++) {
+          const spk = get(S, p, k);
+          const sqk = get(S, q, k);
+          S[p]![k] = c * spk - s * sqk;
+          S[q]![k] = s * spk + c * sqk;
+        }
+        for (let k = 0; k < n; k++) {
+          const vkp = get(V, k, p);
+          const vkq = get(V, k, q);
+          V[k]![p] = c * vkp - s * vkq;
+          V[k]![q] = s * vkp + c * vkq;
+        }
+      }
+    }
+  }
+  const order = Array.from({ length: n }, (_, i) => i).sort((i, j) => get(S, j, j) - get(S, i, i));
+  return {
+    values: order.map((i) => get(S, i, i)),
+    vectors: V.map((r) => order.map((i) => r[i]!)),
+  };
+}
