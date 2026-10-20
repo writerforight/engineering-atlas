@@ -25,7 +25,7 @@ Every topic page follows the same order:
 Click to jump straight in:
 
 - **M² = −I and e^{tM}**: [2×2 family (incl. skew-symmetric ±J)](https://writerforight.github.io/engineering-atlas/#/topic/complex-structure?tab=structure&section=etkilesim) · [similarity and commutator \[M, A\]](https://writerforight.github.io/engineering-atlas/#/topic/complex-structure?tab=similarity&section=etkilesim) · [4×4 quaternions (skew-symmetric M)](https://writerforight.github.io/engineering-atlas/#/topic/complex-structure?tab=quaternion&section=etkilesim) · [derivation](https://writerforight.github.io/engineering-atlas/#/topic/complex-structure?section=turetme)
-- **Skew-symmetric matrix [ω]× and Rodrigues**: [type a vector ω, see [ω]×, its powers and e^{t[ω]×} in 3D](https://writerforight.github.io/engineering-atlas/#/topic/skew-symmetric?section=etkilesim) · [derivation](https://writerforight.github.io/engineering-atlas/#/topic/skew-symmetric?section=turetme)
+- **Skew-symmetric matrix [ω]× and its powers**: [draw a vector ω, pick a power k, watch [ω]×ᵏ bend 3D space](https://writerforight.github.io/engineering-atlas/#/topic/skew-symmetric?section=etkilesim) · [derivation](https://writerforight.github.io/engineering-atlas/#/topic/skew-symmetric?section=turetme)
 - **Laplace of an integral, F(s)/s**: [interactive](https://writerforight.github.io/engineering-atlas/#/topic/laplace-integration?section=etkilesim) · [derivation](https://writerforight.github.io/engineering-atlas/#/topic/laplace-integration?section=turetme)
 
 Deep links: `#/topic/<slug>?tab=<tab>&section=<sezgi|etkilesim|turetme|yorum>`. The tab in the URL
@@ -34,7 +34,7 @@ updates as you switch tabs, so the address bar is always a shareable link to the
 | Slug | What it shows |
 | --- | --- |
 | `complex-structure` | Real 2×2 matrices with M² = −I, `e^{tM} = cos t I + sin t M`, elliptic orbits as `P e^{tJ} P⁻¹`, the similarity flow `e^{tM} A e^{−tM}` and `[M, A]`, and the 4×4 quaternion case (a whole S² of complex structures). |
-| `skew-symmetric` | Type any ω ∈ R³: its cross-product matrix [ω]×, the powers [ω]×ᵏ (cycle via [ω]×³ = −\|ω\|²[ω]×), Rodrigues' formula e^{t[ω]×} = I + sin θ K̂ + (1 − cos θ) K̂² checked against a numerical expm, and a draggable 3D view of v rotating about ω with ω×v and ω×(ω×v). |
+| `skew-symmetric` | Type any ω ∈ R³: its cross-product matrix [ω]×, the powers [ω]×ᵏ (cycle via [ω]×³ = −\|ω\|²[ω]×), and a 3D lattice morphing from I to [ω]×ᵏ: ω is crushed, space flattens onto the plane ⊥ ω and turns 90° per power. Drag the tip of ω to draw it. |
 | `laplace-integration` | `L{∫f} = F(s)/s`, the damped integrand `g(t)e^{−σt}`, the σ → 0 limit `1/(jω) + πF(0)δ(ω)`, ROC warnings, causal signal vs causal system. |
 
 ## Development

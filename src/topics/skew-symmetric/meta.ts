@@ -1,9 +1,9 @@
 import type { TopicMeta } from '../../core/topic';
 
 export const meta: TopicMeta = {
-  title: 'Ters simetrik matris [ω]× ve Rodrigues formülü',
+  title: 'Ters simetrik matris [ω]×: kuvvetleri uzayı nasıl büker',
   summary:
-    'Bir vektör yaz, ters simetrik matrisini, kuvvetlerini ve üstelini gör. e^{t[ω]×} (Rodrigues) her vektörü ω ekseni etrafında döndürür; 3B’de çizilir.',
-  tags: ['lineer cebir', 'matris üstel', 'dönme', 'kinematik'],
+    'Bir vektör çiz, ters simetrik matrisini al, kuvvetini seç ve 3B ızgaranın nasıl büküldüğünü izle: ω yönü ezilir, uzay dik düzleme yassılır ve her kuvvette 90° döner.',
+  tags: ['lineer cebir', 'dönme', 'çapraz çarpım', '3B'],
   order: 15,
 };
