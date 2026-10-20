@@ -22,6 +22,14 @@ Every topic page follows the same order:
 
 ## Topics
 
+Click to jump straight in:
+
+- **M² = −I and e^{tM}**: [2×2 family (incl. skew-symmetric ±J)](https://writerforight.github.io/engineering-atlas/#/topic/complex-structure?tab=structure&section=etkilesim) · [similarity and commutator \[M, A\]](https://writerforight.github.io/engineering-atlas/#/topic/complex-structure?tab=similarity&section=etkilesim) · [4×4 quaternions (skew-symmetric M)](https://writerforight.github.io/engineering-atlas/#/topic/complex-structure?tab=quaternion&section=etkilesim) · [derivation](https://writerforight.github.io/engineering-atlas/#/topic/complex-structure?section=turetme)
+- **Laplace of an integral, F(s)/s**: [interactive](https://writerforight.github.io/engineering-atlas/#/topic/laplace-integration?section=etkilesim) · [derivation](https://writerforight.github.io/engineering-atlas/#/topic/laplace-integration?section=turetme)
+
+Deep links: `#/topic/<slug>?tab=<tab>&section=<sezgi|etkilesim|turetme|yorum>`. The tab in the URL
+updates as you switch tabs, so the address bar is always a shareable link to the current view.
+
 | Slug | What it shows |
 | --- | --- |
 | `complex-structure` | Real 2×2 matrices with M² = −I, `e^{tM} = cos t I + sin t M`, elliptic orbits as `P e^{tJ} P⁻¹`, the similarity flow `e^{tM} A e^{−tM}` and `[M, A]`, and the 4×4 quaternion case (a whole S² of complex structures). |

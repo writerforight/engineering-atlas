@@ -9,3 +9,4 @@ export * from './Tabs';
 export * from './theme';
 export * from './useAnimation';
 export * from './format';
+export * from './useHashParam';

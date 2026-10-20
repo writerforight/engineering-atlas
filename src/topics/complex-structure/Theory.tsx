@@ -128,6 +128,15 @@ export function Notes() {
           biri diğerine sürekli olarak dönüşemez; yön (oryantasyon) bir topolojik değişmezdir.
         </li>
         <li>
+          <b>Ters simetrik (skew) olanlar.</b> <Tex tex="e^{tM}" />’in ortogonal, yani gerçek bir dönme olması
+          için <Tex tex="M^{\mathsf T}=-M" /> gerekir ve yeter: <Tex tex="(e^{tM})^{\mathsf T}e^{tM}=e^{tM^{\mathsf T}}e^{tM}" />{' '}
+          ifadesi her <Tex tex="t" /> için <Tex tex="I" /> olmalı. <Tex tex="t" />’ye göre türev alınıp{' '}
+          <Tex tex="t=0" /> konunca <Tex tex="M^{\mathsf T}+M=0" /> çıkar. 2×2 ailede bu <Tex tex="a=0" />,{' '}
+          <Tex tex="c=-b" /> ve <Tex tex="bc=-1" /> demektir, yani yalnızca <Tex tex="b=\pm1" />:{' '}
+          <Tex tex="\pm J" />. Diğer bütün üyeler eğik koordinatlarda dönme yapar ve yörüngeleri elipstir. 4×4’te
+          ise her <Tex tex="M_n" /> ters simetriktir, bu yüzden <Tex tex="e^{tM_n}" /> gerçek bir 4B dönmedir.
+        </li>
+        <li>
           <b>Boyut çift olmalı.</b> <Tex tex="M^2=-I_n" /> ise <Tex tex="(\det M)^2=(-1)^n" />, yani{' '}
           <Tex tex="n" /> çift olmak zorundadır. 3×3’te böyle bir reel matris yoktur.
         </li>

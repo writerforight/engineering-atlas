@@ -1,5 +1,6 @@
 import { useEffect, useState, type ComponentType } from 'react';
 import type { TheoryModule } from '../core/topic';
+import { hashParams } from '../core/ui/useHashParam';
 import { findTopic } from './registry';
 
 const SECTIONS = [
@@ -30,6 +31,14 @@ export function TopicPage({ slug }: { slug: string }) {
       alive = false;
     };
   }, [topic, slug]);
+
+  // "?section=<id>" deep-links to a section once the topic has loaded.
+  const ready = loaded?.slug === slug;
+  useEffect(() => {
+    if (!ready) return;
+    const id = hashParams().get('section');
+    if (id) requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }));
+  }, [ready]);
 
   useEffect(() => {
     document.title = topic ? `${topic.meta.title} · Engineering Atlas` : 'Engineering Atlas';

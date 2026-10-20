@@ -20,6 +20,7 @@ import {
   sphericalToUnit,
   sub,
   trace,
+  transpose,
   type Mat,
   type Vec,
 } from '../../core/math';
@@ -40,6 +41,7 @@ import {
   prefersReducedMotion,
   texMatrix,
   useAnimatedTime,
+  useHashParam,
   type CanvasPointer,
   type DrawContext,
   type Palette,
@@ -47,6 +49,7 @@ import {
 } from '../../core/ui';
 
 type TabId = 'structure' | 'similarity' | 'quaternion';
+const TAB_IDS: readonly TabId[] = ['structure', 'similarity', 'quaternion'];
 const TWO_PI = 2 * Math.PI;
 const ORBIT_SAMPLES = 240;
 
@@ -77,7 +80,7 @@ function squareViewport(width: number, height: number, R: number): Viewport {
 }
 
 export default function Viz() {
-  const [tab, setTab] = useState<TabId>('structure');
+  const [tab, setTab] = useHashParam<TabId>('tab', 'structure', TAB_IDS);
   const [playing, setPlaying] = useState(() => !prefersReducedMotion());
   const [t, setT] = useAnimatedTime(playing, 0.7, TWO_PI);
   const [a, setA] = useState(0.6);
@@ -160,6 +163,9 @@ function StructureTab({ a, b, setA, setB, t }: AbProps & { t: number }) {
   const M2 = mul(M, M);
   const errM2 = maxAbsDiff(M2, scale(identity(2), -1));
   const errExp = maxAbsDiff(E, expm(M, t));
+  // M + M^T = 0 (skew-symmetric) exactly when e^{tM} is orthogonal, i.e. a true rotation.
+  const skewErr = norm(add(M, transpose(M)));
+  const isSkew = skewErr < 1e-9;
 
   const ellipse = useMemo(() => {
     const start = [Math.cos(phi), Math.sin(phi)];
@@ -217,6 +223,17 @@ function StructureTab({ a, b, setA, setB, t }: AbProps & { t: number }) {
       </div>
       <div className="controls panel">
         <AbSliders a={a} b={b} setA={setA} setB={setB} />
+        <div className="row">
+          <button className="btn" aria-pressed={isSkew && b < 0} onClick={() => (setA(0), setB(-1))}>
+            Ters simetrik: J
+          </button>
+          <button className="btn" aria-pressed={isSkew && b > 0} onClick={() => (setA(0), setB(1))}>
+            Ters simetrik: −J
+          </button>
+          <button className="btn" onClick={() => (setA(0.6), setB(-1.3))}>
+            Eğik (genel)
+          </button>
+        </div>
         <Slider
           label={
             <>
@@ -240,6 +257,14 @@ function StructureTab({ a, b, setA, setB, t }: AbProps & { t: number }) {
             <span className={errM2 < 1e-12 ? 'ok' : 'bad'}>
               <Tex tex={`\\max|M^2+I| = ${fmtErr(errM2)}`} />
             </span>
+          </div>
+          <div>
+            <Tex tex={`\\|M+M^{\\mathsf T}\\|_F=${fmt(skewErr)}`} />{' '}
+            {isSkew ? (
+              <span className="ok">ters simetrik: eᵗᴹ ortogonal, yörünge çember</span>
+            ) : (
+              <span style={{ color: 'var(--muted)' }}>ters simetrik değil: eᵗᴹ bir “eğik dönme”, yörünge elips</span>
+            )}
           </div>
           <div>
             <Tex tex={`\\operatorname{tr}M=${fmt(trace(M))},\\quad \\det M=${fmt(det2(M), 4)}`} />
