@@ -1,5 +1,7 @@
 # Engineering Atlas
 
+**Live:** https://writerforight.github.io/engineering-atlas/
+
 Interactive visualisations of engineering and mathematics concepts. Static site
 (Vite + React + TypeScript + KaTeX), deployed to GitHub Pages. The UI is in
 Turkish; code, comments and commits are in English.
@@ -97,6 +99,11 @@ Choices made where the brief left room:
 - **Animation:** starts paused when the OS asks for reduced motion.
 - **Theme:** follows the system by default; the header button cycles system → light → dark and the choice is stored in `localStorage`.
 - **TypeScript:** pinned to 5.9 (`strict`, `noUncheckedIndexedAccess`); TS 7 was too new to rely on.
+
+## Author
+
+Built by [Eren Can Almaz](https://writerforight.github.io/), an Electrical Engineering (Elektrotechnik)
+student at RWTH Aachen University who builds interactive tools that make engineering visible.
 
 ## License
 
