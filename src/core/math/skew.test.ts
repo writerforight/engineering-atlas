@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { approxEqual, det2, expm, identity, mul, mulVec, scale, transpose, add } from './matrix';
+import { approxEqual, det2, expm, expSeries, identity, maxAbsDiff, mul, mulVec, scale, transpose, add } from './matrix';
 import { cross3, norm3, rodrigues, skew3, skewPower, vee3 } from './skew';
 
 const ws = [
@@ -47,5 +47,17 @@ describe('skew-symmetric cross-product matrix', () => {
   it('zero vector gives the identity', () => {
     expect(rodrigues([0, 0, 0], 3)).toEqual(identity(3));
     expect(det2(identity(2))).toBe(1);
+  });
+});
+
+describe('Taylor partial sums of e^{s[v]x}', () => {
+  it.each(ws)('v = (%f, %f, %f): partial sums converge to Rodrigues', (...v) => {
+    for (const s of [0.4, 1.5]) {
+      const R = rodrigues(v, s);
+      const err = (N: number) => maxAbsDiff(expSeries(skew3(v), s, N + 1), R);
+      expect(err(40)).toBeLessThan(1e-10);
+      expect(err(8)).toBeLessThan(err(2));
+      expect(approxEqual(expSeries(skew3(v), s, 1), identity(3))).toBe(true);
+    }
   });
 });
