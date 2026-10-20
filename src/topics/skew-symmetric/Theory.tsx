@@ -81,9 +81,8 @@ export function Notes() {
     <div className="prose">
       <ul>
         <li>
-          <b>Görselde ne izliyorsun?</b> Izgara, <Tex tex="(1-s)I+s[\omega]_\times^k" /> ile dönüştürülüyor.{' '}
-          <Tex tex="s=0" />’da uzay değişmemiş, <Tex tex="s=1" />’de tamamen <Tex tex="[\omega]_\times^k" />{' '}
-          uygulanmış. <Tex tex="k\ge1" /> için bütün ızgara gri diske, yani <Tex tex="\omega" />’ya dik düzleme
+          <b>Görselde ne izliyorsun?</b> Soluk ızgara orijinal uzay, renkli ızgara{' '}
+          <Tex tex="[\omega]_\times^k" /> uygulanmış hâli. <Tex tex="k\ge1" /> için bütün ızgara gri diske, yani <Tex tex="\omega" />’ya dik düzleme
           yapışır. <Tex tex="\omega" /> boyunca uzanan çizgiler tek bir noktaya çöker.
         </li>
         <li>

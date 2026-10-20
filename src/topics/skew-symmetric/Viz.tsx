@@ -1,8 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
-import { add, identity, mulVec, norm3, scale, skew3, skewPower, type Mat, type Vec } from '../../core/math';
+import { mulVec, norm3, scale, skew3, skewPower, type Mat, type Vec } from '../../core/math';
 import {
   Canvas,
-  Slider,
   Tex,
   arrow,
   camera,
@@ -10,10 +9,8 @@ import {
   label,
   makeViewport,
   polyline,
-  prefersReducedMotion,
   project,
   texMatrix,
-  useAnimatedTime,
   type CanvasPointer,
   type DrawContext,
   type Palette,
@@ -81,10 +78,6 @@ export default function Viz() {
   const [w, setW] = useState<Vec>([0, 0, 1]);
   const [k, setK] = useState(1);
   const [normalize, setNormalize] = useState(true);
-  const [playing, setPlaying] = useState(() => !prefersReducedMotion());
-  // Morph phase: s runs 0 -> 1 -> 0 so space bends from I to the chosen power and back.
-  const [phase, setPhase] = useAnimatedTime(playing, 0.35, 2);
-  const s = phase <= 1 ? phase : 2 - phase;
   const [view, setView] = useState({ az: 0.75, el: 0.5 });
   const drag = useRef<{ mode: 'tip' | 'cam'; x: number; y: number; az: number; el: number; w: Vec } | null>(null);
 
@@ -92,7 +85,7 @@ export default function Viz() {
   const K = skew3(w);
   const Kk = skewPower(w, k);
   const target = normalize && n > 0 && k > 0 ? scale(Kk, 1 / n ** k) : Kk;
-  const A: Mat = add(scale(identity(3), 1 - s), scale(target, s));
+  const A: Mat = target;
 
   const draw = useCallback(
     ({ ctx, width, height, palette: pal }: DrawContext) => {
@@ -172,27 +165,6 @@ export default function Viz() {
               </button>
             ))}
           </div>
-          <div className="row">
-            <button className="btn" aria-pressed={playing} onClick={() => setPlaying((x) => !x)}>
-              {playing ? '❚❚ Durdur' : '▶ Bük'}
-            </button>
-            <div style={{ flex: '1 1 160px' }}>
-              <Slider
-                label={
-                  <>
-                    bükülme <Tex tex="s" />
-                  </>
-                }
-                value={s}
-                min={0}
-                max={1}
-                onChange={(x) => {
-                  setPlaying(false);
-                  setPhase(x);
-                }}
-              />
-            </div>
-          </div>
           <label className="row" style={{ fontSize: 14 }}>
             <input type="checkbox" checked={normalize} onChange={(e) => setNormalize(e.target.checked)} />
             <Tex tex="|\omega|^k" /> ile normalize et (sadece şekle bak)
@@ -200,7 +172,7 @@ export default function Viz() {
           <div className="readout">
             <Tex block tex={`[\\omega]_\\times=${texMatrix(K, 2)}`} />
             <Tex block tex={`[\\omega]_\\times^{${k}}=${texMatrix(Kk, 2)}=${powerTex(k, n)}`} />
-            <Tex block tex={`x\\;\\mapsto\\;\\big((1-s)\\,I+s\\,[\\omega]_\\times^{${k}}${normalize && k > 0 ? `/|\\omega|^{${k}}` : ''}\\big)\\,x`} />
+            <Tex block tex={`x\\;\\mapsto\\;[\\omega]_\\times^{${k}}${normalize && k > 0 ? `/|\\omega|^{${k}}` : ''}\\,x`} />
             <p style={{ margin: 0 }}>{effectText(k, n)}</p>
           </div>
         </div>
