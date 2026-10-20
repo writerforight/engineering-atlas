@@ -52,6 +52,18 @@ describe('L{ int_0^t f } = F(s) / s, numerically', () => {
     }
     expect(sig.F([0, 0])[0]).toBeCloseTo(sig.gInfinity!, 5);
   });
+
+  it('drawn signal with sharp zigzag (kinks at every knot) stays exact', () => {
+    const ys = Array.from({ length: 81 }, (_, k) => (k % 2 ? 1 : -0.5));
+    const sig = drawnSignal(ys, 8);
+    for (const sigma of [0.5, 0.1, 0.02]) {
+      // Integrate g e^{-sigma t} on [0, 8] and add the exact tail of the constant g(inf).
+      const head = simpson((t) => sig.g(t) * Math.exp(-sigma * t), 0, 8, 9600);
+      const tail = (sig.gInfinity! * Math.exp(-sigma * 8)) / sigma;
+      const analytic = integralTransform(sig, [sigma, 0])[0];
+      expect(Math.abs(head + tail - analytic)).toBeLessThan(1e-6 * Math.max(1, analytic));
+    }
+  });
 });
 
 describe('sigma -> 0 limit', () => {

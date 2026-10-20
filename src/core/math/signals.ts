@@ -100,7 +100,9 @@ export function drawnSignal(ys: readonly number[], duration: number): CausalSign
   };
   const F = (s: Complex): Complex => {
     const [sg, w] = s;
-    const panels = Math.max(400, 2 * n);
+    // Panel count is a multiple of 2n so every knot sits on a Simpson pair
+    // boundary; the integrand is then smooth on each pair.
+    const panels = 2 * n * Math.max(1, Math.ceil(200 / n));
     return [
       simpson((t) => f(t) * Math.exp(-sg * t) * Math.cos(w * t), 0, duration, panels),
       simpson((t) => -f(t) * Math.exp(-sg * t) * Math.sin(w * t), 0, duration, panels),

@@ -12,7 +12,9 @@ export function App() {
   const topicMatch = /^\/topic\/([^/?#]+)/.exec(route);
 
   const slug = topicMatch?.[1];
-  useEffect(() => window.scrollTo(0, 0), [slug]);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [slug]);
 
   return (
     <>

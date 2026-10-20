@@ -77,7 +77,7 @@ export default function Viz() {
   const [alpha, setAlpha] = useState(0.4);
   const [w0, setW0] = useState(2);
   const [ys, setYs] = useState(initialDrawing);
-  const lastIdx = useRef<number | null>(null);
+  const lastPoint = useRef<{ idx: number; y: number } | null>(null);
 
   const sig: CausalSignal = useMemo(() => {
     switch (kind) {
@@ -102,7 +102,9 @@ export default function Viz() {
   const area = useMemo(() => {
     if (!inRoc) return null;
     const horizon = Math.min(400, 40 / (sigma - roc));
-    const numeric = simpson((t) => sig.g(t) * Math.exp(-sigma * t), 0, horizon, 8000);
+    // Once g has settled, the tail beyond the horizon is g(inf) e^{-sigma H} / sigma.
+    const tail = sig.gInfinity !== null && sigma > 0 ? (sig.gInfinity * Math.exp(-sigma * horizon)) / sigma : 0;
+    const numeric = simpson((t) => sig.g(t) * Math.exp(-sigma * t), 0, horizon, 8000) + tail;
     const analytic = integralTransform(sig, [sigma, 0])[0];
     return { numeric, analytic };
   }, [sig, sigma, roc, inRoc]);
@@ -157,7 +159,7 @@ export default function Viz() {
     (p: CanvasPointer) => {
       if (kind !== 'drawn') return;
       if (p.type === 'up') {
-        lastIdx.current = null;
+        lastPoint.current = null;
         return;
       }
       if (p.type === 'move' && !p.buttons) return;
@@ -166,19 +168,19 @@ export default function Viz() {
       const y = Math.max(-DRAW_Y, Math.min(DRAW_Y, vp.y.invert(p.y)));
       const idx = Math.round((t / DRAW_T) * DRAW_N);
       if (idx < 0 || idx > DRAW_N) return;
+      // Read the previous sample now: the state updater below runs later.
+      const from = lastPoint.current ?? { idx, y };
+      lastPoint.current = { idx, y };
       setYs((prev) => {
         const next = prev.slice();
-        const from = lastIdx.current ?? idx;
-        const yFrom = lastIdx.current !== null ? prev[from]! : y;
-        const [a, b] = from <= idx ? [from, idx] : [idx, from];
-        // Fill the gap since the previous pointer sample so fast strokes stay continuous.
+        const [a, b] = from.idx <= idx ? [from.idx, idx] : [idx, from.idx];
+        // Interpolate across the gap since the previous pointer sample so fast strokes stay continuous.
         for (let k = a; k <= b; k++) {
-          const u = b === a ? 1 : (k - from) / (idx - from || 1);
-          next[k] = yFrom + (y - yFrom) * u;
+          const u = b === a ? 1 : (k - from.idx) / (idx - from.idx);
+          next[k] = from.y + (y - from.y) * u;
         }
         return next;
       });
-      lastIdx.current = idx;
     },
     [kind],
   );
