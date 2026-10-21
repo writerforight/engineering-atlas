@@ -30,6 +30,8 @@ Click to jump straight in:
 - **Spectrum of a derivative, F{f′} = iωF**: [interactive (derivative)](https://writerforight.github.io/engineering-atlas/#/topic/fourier-derivative?tab=derivative&section=etkilesim) · [integral F/(iω)](https://writerforight.github.io/engineering-atlas/#/topic/fourier-derivative?tab=integral&section=etkilesim) · [derivation](https://writerforight.github.io/engineering-atlas/#/topic/fourier-derivative?section=turetme) · [results table](src/topics/fourier-derivative/README.md)
 - **Laplace of an integral, F(s)/s**: [interactive](https://writerforight.github.io/engineering-atlas/#/topic/laplace-integration?section=etkilesim) · [derivation](https://writerforight.github.io/engineering-atlas/#/topic/laplace-integration?section=turetme)
 
+Standalone page (not part of the site build): [`convolution-story/`](convolution-story/README.md), the convolution story as a single offline `index.html` (double-click to open, no network, no storage).
+
 Deep links: `#/topic/<slug>?tab=<tab>&section=<sezgi|etkilesim|turetme|yorum>`. The tab in the URL
 updates as you switch tabs, so the address bar is always a shareable link to the current view.
 

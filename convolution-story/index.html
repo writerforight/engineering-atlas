@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:">
+<meta name="referrer" content="no-referrer">
+<title>Konvolüsyon: bir hikâye</title>
+<style>
+  :root {
+    --bg: #ffffff; --panel: #f4f4f2; --fg: #111111; --muted: #4a4a4a; --grid: #d9d9d4; --axis: #222222;
+    --accent: #0072b2; --ok: #007a4d; --bad: #c0392b; --border: #bdbdb5;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  body { font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 18px 16px 40px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 14px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+  .inputs { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
+  label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 3px; }
+  input[type=text] { width: 100%; font: 14px ui-monospace, Menlo, monospace; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; background: #fff; color: var(--fg); }
+  button { font: inherit; font-size: 14px; padding: 7px 13px; border-radius: 7px; border: 1px solid var(--axis); background: #fff; color: var(--fg); cursor: pointer; }
+  button:hover { background: #ececea; }
+  button:disabled { opacity: .45; cursor: default; }
+  button[aria-pressed=true], button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button:focus-visible, input:focus-visible { outline: 3px solid #e69f00; outline-offset: 1px; }
+  .err { color: var(--bad); font-weight: 600; min-height: 1.4em; margin: 6px 0 0; }
+  .checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 6px 14px; margin-top: 8px; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .lamp { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--axis); flex: none; }
+  .lamp.ok { background: var(--ok); }
+  .lamp.bad { background: var(--bad); }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .steps { display: flex; gap: 4px; }
+  .steps span { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--axis); font-weight: 700; font-size: 13px; }
+  .steps span.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .text { margin: 10px 0 4px; }
+  .formula { font: 16px ui-monospace, Menlo, monospace; background: #fff; border: 1px solid var(--border); border-radius: 7px; padding: 6px 10px; display: inline-block; margin: 2px 0 8px; }
+  .slider { display: flex; gap: 10px; align-items: center; margin: 6px 0; }
+  .slider input { flex: 1; max-width: 420px; }
+  .slider output { font: 14px ui-monospace, Menlo, monospace; min-width: 9ch; }
+  canvas { width: 100%; display: block; background: #fff; border: 1px solid var(--border); border-radius: 8px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .legend i { display: inline-block; width: 14px; height: 10px; border: 1px solid var(--axis); margin-right: 5px; vertical-align: middle; }
+  [hidden] { display: none !important; }
+  @media (max-width: 720px) { .inputs { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Konvolüsyon: bir hikâye</h1>
+  <p class="sub">Giriş ölçeklenmiş, kaydırılmış impulsların toplamıdır. Doğrusal ve zamanla değişmez bir sistem her impulsa aynı yanıtı verir; çıkış bu yanıtların toplamıdır.</p>
+
+  <section class="card" aria-label="Veri">
+    <div class="inputs">
+      <div><label for="in-x">x[n] (virgülle ayır, en fazla 64)</label><input id="in-x" type="text" spellcheck="false" autocomplete="off"></div>
+      <div><label for="in-h">h[n], n = 0, 1, … (en fazla 64)</label><input id="in-h" type="text" spellcheck="false" autocomplete="off"></div>
+      <div class="row"><button id="apply" class="primary">Uygula</button><button id="reset">Varsayılan</button></div>
+    </div>
+    <p class="err" id="err" role="alert"></p>
+    <div id="lenline"></div>
+    <div class="checks" aria-label="Kontroller">
+      <div class="check"><span class="lamp" id="c1"></span><span id="c1t"></span></div>
+      <div class="check"><span class="lamp" id="c2"></span><span id="c2t"></span></div>
+      <div class="check"><span class="lamp" id="c3"></span><span id="c3t"></span></div>
+      <div class="check"><span class="lamp" id="c4"></span><span id="c4t"></span></div>
+    </div>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="story" aria-pressed="true">Hikâye (adım adım)</button>
+    <button role="tab" data-tab="flip" aria-pressed="false">Çevir-kaydır</button>
+    <button role="tab" data-tab="cont" aria-pressed="false">Sürekli hal (Δ → 0)</button>
+  </div>
+
+  <section class="card" id="pane-story">
+    <div class="row">
+      <div class="steps" id="stepdots"></div>
+      <button id="prev">◀ Geri</button>
+      <button id="next">İleri ▶</button>
+      <button id="play">▶ Oynat</button>
+    </div>
+    <p class="text" id="s-text"></p>
+    <div class="formula" id="s-formula"></div>
+    <div class="slider" id="m-wrap" hidden><label for="m">m</label><input id="m" type="range" min="0" max="9" step="1" value="3"><output id="m-out"></output></div>
+    <div class="slider" id="k-wrap" hidden><label for="k">eklenen parça</label><input id="k" type="range" min="0" max="10" step="1" value="0"><output id="k-out"></output></div>
+    <canvas id="cv-story" aria-label="Hikâye grafiği"></canvas>
+    <div class="legend" id="s-legend"></div>
+  </section>
+
+  <section class="card" id="pane-flip" hidden>
+    <div class="row"><button id="play-flip">▶ Oynat</button></div>
+    <p class="text">Aynı toplamı n’yi sabitleyip bütün k’lar üzerinden okumak: h ters çevrilir (h[−k]), n kadar kaydırılır (h[n−k]), x[k] ile çarpılır ve çarpımlar toplanır.</p>
+    <div class="formula">y[n] = Σₖ x[k] · h[n−k]</div>
+    <div class="slider"><label for="n">n</label><input id="n" type="range" min="0" max="14" step="1" value="4"><output id="n-out"></output></div>
+    <canvas id="cv-flip" aria-label="Çevir-kaydır grafiği"></canvas>
+    <p id="flip-eq"></p>
+  </section>
+
+  <section class="card" id="pane-cont" hidden>
+    <p class="text">Aynı hikâye sürekli zamanda: impulslar yerine genişliği Δ olan darbeler. m. darbenin alanı x(mΔ)·Δ, yanıtı yaklaşık x(mΔ)·h(t−mΔ)·Δ. Δ küçüldükçe yanıtların toplamı integrale yaklaşır. Örnek: x(t) = 1 − t/4 (0 ≤ t &lt; 4), h(t) = e⁻ᵗ (t ≥ 0).</p>
+    <div class="formula">y(t) = ∫ x(τ) · h(t−τ) dτ ≈ Σₘ x(mΔ) · h(t−mΔ) · Δ</div>
+    <div class="slider"><label for="d">Δ</label><input id="d" type="range" min="0" max="4" step="1" value="1"><output id="d-out"></output></div>
+    <canvas id="cv-cont" aria-label="Sürekli konvolüsyon grafiği"></canvas>
+    <div class="legend">
+      <span><i style="background:#56b4e9"></i>tek darbe yanıtları x(mΔ)·h(t−mΔ)·Δ</span>
+      <span><i style="background:#000"></i>toplam</span>
+      <span><i style="background:#d55e00"></i>tam integral (kesikli)</span>
+    </div>
+    <p id="cont-err"></p>
+  </section>
+</main>
+
+<script>
+'use strict';
+(() => {
+  // ---------- limits and buffers (allocated once, reused on every draw) ----------
+  const MAXLEN = 64;
+  const MAXY = 2 * MAXLEN - 1;
+  const CANVAS_MAX_W = 1200, CANVAS_MAX_H = 800;
+  const x = new Float64Array(MAXLEN), h = new Float64Array(MAXLEN);
+  const yDirect = new Float64Array(MAXY), yAcc = new Float64Array(MAXY), yFlip = new Float64Array(MAXY);
+  const posStack = new Float64Array(MAXY), negStack = new Float64Array(MAXY);
+  let Lx = 0, Lh = 0, Ly = 0;
+
+  // Okabe–Ito palette (colour-blind safe); parts cycle through it, bars get a dark outline.
+  const PAL = ['#E69F00', '#56B4E9', '#009E73', '#F0E442', '#0072B2', '#D55E00', '#CC79A7', '#999999'];
+  const col = (m) => PAL[m % PAL.length];
+  const INK = '#111111', GRID = '#d9d9d4', MUTED = '#4a4a4a';
+
+  const DEFAULT_X = '2, 1, 0.5, -1, 1.5, 0, 1, -0.5, 0.8, 1.2';
+  const DEFAULT_H = '1, 2, 3, 2, 1, 0.5';
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- parsing (numbers only; nothing user-typed is ever evaluated or inserted as HTML) ----------
+  function parse(text, name) {
+    const parts = String(text).split(/[\s,;]+/).filter((s) => s.length > 0);
+    if (parts.length === 0) return { error: `${name} boş.` };
+    if (parts.length > MAXLEN) return { error: `${name} çok uzun: ${parts.length} eleman (en fazla ${MAXLEN}).` };
+    const out = [];
+    for (const p of parts) {
+      if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(p)) return { error: `${name}: "${p.slice(0, 20)}" bir sayı değil.` };
+      const v = Number(p);
+      if (!Number.isFinite(v) || Math.abs(v) > 1e6) return { error: `${name}: ${p.slice(0, 20)} geçersiz (|değer| ≤ 1e6 olmalı).` };
+      out.push(v);
+    }
+    return { values: out };
+  }
+
+  // ---------- the maths ----------
+  function compute() {
+    Ly = Lx + Lh - 1;
+    // Direct convolution, by definition (np.convolve equivalent).
+    for (let n = 0; n < Ly; n++) {
+      let s = 0;
+      for (let m = 0; m < Lx; m++) { const k = n - m; if (k >= 0 && k < Lh) s += x[m] * h[k]; }
+      yDirect[n] = s;
+    }
+    // Story order: add the response of each input impulse, m = 0, 1, …
+    yAcc.fill(0);
+    for (let m = 0; m < Lx; m++) for (let k = 0; k < Lh; k++) yAcc[m + k] += x[m] * h[k];
+    // Flip-and-slide order: for each n, the overlap of x[k] and h[n−k].
+    for (let n = 0; n < Ly; n++) {
+      let s = 0;
+      for (let k = 0; k < Lx; k++) { const j = n - k; if (j >= 0 && j < Lh) s += x[k] * h[j]; }
+      yFlip[n] = s;
+    }
+    updateChecks();
+  }
+
+  function maxDiff(a, b, len) { let m = 0; for (let i = 0; i < len; i++) m = Math.max(m, Math.abs(a[i] - b[i])); return m; }
+
+  function setCheck(i, ok, text) {
+    $('c' + i).className = 'lamp ' + (ok ? 'ok' : 'bad');
+    $('c' + i).setAttribute('aria-label', ok ? 'geçti' : 'kaldı');
+    $('c' + i + 't').textContent = text;
+  }
+
+  function updateChecks() {
+    let sx = 0, sh = 0, sy = 0, scale = 0;
+    for (let i = 0; i < Lx; i++) sx += x[i];
+    for (let i = 0; i < Lh; i++) sh += h[i];
+    for (let i = 0; i < Ly; i++) { sy += yDirect[i]; scale = Math.max(scale, Math.abs(yDirect[i])); }
+    const sumOk = Math.abs(sy - sh * sx) <= 1e-9 * Math.max(1, Math.abs(sh * sx), scale * Ly);
+    setCheck(1, sumOk, `Σy = ${fmt(sy)}  =  Σh · Σx = ${fmt(sh)} · ${fmt(sx)}`);
+    // Length: count the indices where the definition can be non-zero.
+    let first = Infinity, last = -Infinity;
+    for (let m = 0; m < Lx; m++) { first = Math.min(first, m); last = Math.max(last, m + Lh - 1); }
+    const len = last - first + 1;
+    setCheck(2, len === Lh + Lx - 1, `Uzunluk ${len} = len(h) + len(x) − 1 = ${Lh} + ${Lx} − 1`);
+    // Causality: evaluate y[n] for n < 0 from the definition; h[k] = 0 for k < 0.
+    let neg = 0;
+    for (let n = -Lh; n < 0; n++) for (let m = 0; m < Lx; m++) { const k = n - m; if (k >= 0 && k < Lh) neg = Math.max(neg, Math.abs(x[m] * h[k])); }
+    setCheck(3, neg === 0, `h nedensel ⇒ y[n] = 0, n < 0 (max |y[n<0]| = ${neg})`);
+    const err = maxDiff(yAcc, yDirect, Ly);
+    setCheck(4, err < 1e-12, `Adım 4 toplamı = doğrudan konvolüsyon (max hata ${err.toExponential(1)})`);
+    $('lenline').textContent = `Çıkış uzunluğu = len(h) + len(x) − 1 = ${Lh} + ${Lx} − 1 = ${Ly}`;
+  }
+
+  const fmt = (v) => (Math.abs(v) < 1e-12 ? '0' : Number(v.toPrecision(6)).toString());
+
+  function applyInput(xs, hs) {
+    const px = parse(xs, 'x'), ph = parse(hs, 'h');
+    const err = px.error || ph.error;
+    if (err) { $('err').textContent = err; return false; }
+    $('err').textContent = '';
+    Lx = px.values.length; Lh = ph.values.length;
+    x.fill(0); h.fill(0);
+    px.values.forEach((v, i) => { x[i] = v; });
+    ph.values.forEach((v, i) => { h[i] = v; });
+    compute();
+    state.m = Math.min(state.m, Lx - 1);
+    state.k = Math.min(state.k, Lx);
+    state.n = Math.min(state.n, Ly - 1);
+    syncSliders();
+    stop();
+    requestDraw();
+    return true;
+  }
+
+  // ---------- state, dirty flag, animation ----------
+  const state = { tab: 'story', step: 1, m: 3, k: 0, n: 4, d: 1 };
+  let dirty = false, drawPending = 0;
+  let playing = null; // { kind: 'story' | 'flip', last: ms, acc: ms }
+  let raf = 0;
+
+  function requestDraw() {
+    dirty = true;
+    if (!drawPending && !raf) drawPending = requestAnimationFrame(() => { drawPending = 0; if (dirty) draw(); });
+  }
+
+  function play(kind) {
+    if (playing) { stop(); requestDraw(); return; }
+    if (kind === 'story' && state.step === 5) { state.step = 1; }
+    if (kind === 'flip' && state.n >= Ly - 1) state.n = 0;
+    if (kind === 'story' && state.step === 4 && state.k >= Lx) state.k = 0;
+    playing = { kind, last: performance.now(), acc: 0 };
+    syncButtons();
+    raf = requestAnimationFrame(tick);
+  }
+
+  function stop() {
+    playing = null;
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    syncButtons();
+  }
+
+  // Each tick advances by whole steps on a timer, so a slow frame never skips content.
+  function tick(now) {
+    raf = 0;
+    if (!playing) return;
+    if (document.hidden) { stop(); return; }
+    playing.acc += Math.min(250, now - playing.last);
+    playing.last = now;
+    const period = playing.kind === 'flip' ? 450 : state.step <= 2 ? 1400 : 550;
+    let changed = false;
+    while (playing && playing.acc >= period) {
+      playing.acc -= period;
+      changed = true;
+      if (!advance()) { stop(); break; }
+    }
+    if (changed) { syncSliders(); draw(); }
+    if (playing) raf = requestAnimationFrame(tick); // the loop ends for good when advance() says done
+  }
+
+  function advance() {
+    if (playing.kind === 'flip') {
+      if (state.n >= Ly - 1) return false;
+      state.n++;
+      return true;
+    }
+    if (state.step === 3 && state.m < Lx - 1) { state.m++; return true; }
+    if (state.step === 4 && state.k < Lx) { state.k++; return true; }
+    if (state.step >= 5) return false;
+    state.step++;
+    if (state.step === 3) state.m = 0;
+    if (state.step === 4) state.k = 0;
+    return true;
+  }
+
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
+
+  // ---------- UI wiring ----------
+  const STEP_TEXT = {
+    1: ['Giriş x[n] tek tek impulsların toplamıdır. Her renkli çubuk ayrı bir impulstur: m. impuls, x[m] yüksekliğinde ve n = m konumunda.', 'x[n] = Σₘ x[m] · δ[n−m]'],
+    2: ['Sistemi tek bir dizi tanımlar: δ[n] (n = 0’da 1, başka her yerde 0) girince çıkan h[n], yani impuls yanıtı.', 'δ[n] → h[n]'],
+    3: ['Zamanla değişmezlik: m kadar kaymış impuls m kadar kaymış yanıt verir. Homojenlik: girişi x[m] ile ölçeklersen yanıt da x[m] ile ölçeklenir. Kesikli çerçeve ölçeklenmemiş h[n−m].', 'δ[n−m] → h[n−m]   ⇒   x[m]·δ[n−m] → x[m]·h[n−m]'],
+    4: ['Toplamsallık: impulsların toplamının yanıtı, yanıtların toplamıdır. Parçalar m = 0’dan başlayarak kendi renginde üst üste yığılıyor; siyah çizgi kısmi toplam.', 'y[n] = Σₘ x[m] · h[n−m]'],
+    5: ['Biriken toplam, doğrudan tanımdan hesaplanan konvolüsyonla aynıdır. Alttaki grafik farkı gösteriyor.', 'y = x ∗ h'],
+  };
+
+  function syncSliders() {
+    const m = $('m'), k = $('k'), n = $('n'), d = $('d');
+    m.max = String(Math.max(0, Lx - 1)); m.value = String(state.m);
+    k.max = String(Lx); k.value = String(state.k);
+    n.max = String(Math.max(0, Ly - 1)); n.value = String(state.n);
+    d.value = String(state.d);
+    $('m-out').textContent = `m = ${state.m}, x[m] = ${fmt(x[state.m])}`;
+    $('k-out').textContent = `${state.k} / ${Lx}`;
+    $('n-out').textContent = `n = ${state.n}`;
+    $('d-out').textContent = `Δ = ${DELTAS[state.d]}  (${Math.round(4 / DELTAS[state.d])} darbe)`;
+    const dots = $('stepdots');
+    for (let i = 0; i < 5; i++) dots.children[i].className = state.step === i + 1 ? 'on' : '';
+    $('s-text').textContent = STEP_TEXT[state.step][0];
+    $('s-formula').textContent = STEP_TEXT[state.step][1];
+    $('m-wrap').hidden = state.step !== 3;
+    $('k-wrap').hidden = state.step !== 4;
+    $('prev').disabled = state.step === 1;
+    $('next').disabled = state.step === 5;
+    syncLegend();
+  }
+
+  function syncButtons() {
+    $('play').textContent = playing && playing.kind === 'story' ? '❚❚ Durdur' : '▶ Oynat';
+    $('play-flip').textContent = playing && playing.kind === 'flip' ? '❚❚ Durdur' : '▶ Oynat';
+  }
+
+  function syncLegend() {
+    const lg = $('s-legend');
+    lg.replaceChildren();
+    const add = (color, text) => {
+      const s = document.createElement('span');
+      const i = document.createElement('i');
+      i.style.background = color;
+      s.append(i, document.createTextNode(text));
+      lg.append(s);
+    };
+    if (state.step === 1) add(PAL[0], 'her renk bir impuls x[m]·δ[n−m]');
+    if (state.step === 3) { add(col(state.m), `x[m]·δ[n−m] ve x[m]·h[n−m], m = ${state.m}`); }
+    if (state.step === 4) { add(PAL[1], 'her renk bir parça x[m]·h[n−m]'); add(INK, 'kısmi toplam'); }
+    if (state.step === 5) { add(PAL[4], 'doğrudan konvolüsyon'); add(INK, 'biriken toplam (nokta)'); add(PAL[5], 'fark'); }
+  }
+
+  for (let i = 0; i < 5; i++) $('stepdots').append(document.createElement('span'));
+  for (let i = 0; i < 5; i++) $('stepdots').children[i].textContent = String(i + 1);
+
+  $('prev').addEventListener('click', () => { stop(); state.step = Math.max(1, state.step - 1); syncSliders(); requestDraw(); });
+  $('next').addEventListener('click', () => { stop(); state.step = Math.min(5, state.step + 1); syncSliders(); requestDraw(); });
+  $('play').addEventListener('click', () => play('story'));
+  $('play-flip').addEventListener('click', () => play('flip'));
+  $('m').addEventListener('input', (e) => { stop(); state.m = Number(e.target.value) | 0; syncSliders(); requestDraw(); });
+  $('k').addEventListener('input', (e) => { stop(); state.k = Number(e.target.value) | 0; syncSliders(); requestDraw(); });
+  $('n').addEventListener('input', (e) => { stop(); state.n = Number(e.target.value) | 0; syncSliders(); requestDraw(); });
+  $('d').addEventListener('input', (e) => { state.d = Number(e.target.value) | 0; syncSliders(); requestDraw(); });
+  $('apply').addEventListener('click', () => applyInput($('in-x').value, $('in-h').value));
+  $('reset').addEventListener('click', () => { $('in-x').value = DEFAULT_X; $('in-h').value = DEFAULT_H; applyInput(DEFAULT_X, DEFAULT_H); });
+  for (const id of ['in-x', 'in-h']) $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') $('apply').click(); });
+  document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
+    stop();
+    state.tab = b.dataset.tab;
+    document.querySelectorAll('[data-tab]').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+    $('pane-story').hidden = state.tab !== 'story';
+    $('pane-flip').hidden = state.tab !== 'flip';
+    $('pane-cont').hidden = state.tab !== 'cont';
+    requestDraw();
+  }));
+  if (typeof ResizeObserver === 'function') new ResizeObserver(() => requestDraw()).observe(document.querySelector('main'));
+
+  // ---------- drawing ----------
+  /** Size a canvas to its CSS box (capped at 1200×800 device pixels) and return a ready context. */
+  function prepare(cv, cssH) {
+    const cssW = Math.max(200, cv.clientWidth || cv.parentElement.clientWidth);
+    const dpr = window.devicePixelRatio || 1;
+    const scale = Math.min(dpr, CANVAS_MAX_W / cssW, CANVAS_MAX_H / cssH);
+    const W = Math.round(cssW * scale), H = Math.round(cssH * scale);
+    if (cv.width !== W) cv.width = W;
+    if (cv.height !== H) cv.height = H;
+    cv.style.height = cssH + 'px';
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, cssW, cssH);
+    return { ctx, w: cssW, h: cssH };
+  }
+
+  /** A plot area with n on the x axis: returns mappers. */
+  function frame(ctx, box, n0, n1, y0, y1, title, xLabel = 'n') {
+    if (y1 - y0 < 1e-9) { y1 += 0.5; y0 -= 0.5; }
+    const pad = (y1 - y0) * 0.08; y0 -= pad; y1 += pad;
+    const L = box.x + 46, R = box.x + box.w - 10, T = box.y + 20, B = box.y + box.h - 20;
+    const X = (n) => L + ((n - n0) / (n1 - n0)) * (R - L);
+    const Y = (v) => B - ((v - y0) / (y1 - y0)) * (B - T);
+    ctx.save();
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.strokeStyle = GRID; ctx.lineWidth = 1; ctx.fillStyle = MUTED;
+    const step = niceStep((y1 - y0) / 4);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let v = Math.ceil(y0 / step) * step; v <= y1; v += step) {
+      const py = Math.round(Y(v)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(L, py); ctx.lineTo(R, py); ctx.stroke();
+      ctx.fillText(fmt(Math.abs(v) < step * 1e-6 ? 0 : v), L - 5, py);
+    }
+    const nStep = Math.max(1, Math.ceil((n1 - n0) / 16));
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let n = Math.ceil(n0); n <= n1; n += nStep) ctx.fillText(String(n), X(n), B + 4);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(L, Y(0)); ctx.lineTo(R, Y(0)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(L, T); ctx.lineTo(L, B); ctx.stroke();
+    ctx.fillStyle = INK; ctx.font = '600 12px system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(title, L + 4, box.y + 2);
+    ctx.font = 'italic 12px system-ui, sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.fillText(xLabel, R, B - 2);
+    ctx.save(); ctx.translate(box.x + 10, (T + B) / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('genlik', 0, -2); ctx.restore();
+    ctx.restore();
+    return { X, Y, bw: Math.max(3, Math.min(26, ((R - L) / (n1 - n0 + 1)) * 0.6)) };
+  }
+
+  function niceStep(raw) {
+    if (!(raw > 0)) return 1;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const r = raw / mag;
+    return (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag;
+  }
+
+  function bar(ctx, f, n, v0, v1, color, outline = true, dash = false) {
+    const xa = f.X(n) - f.bw / 2, ya = f.Y(Math.max(v0, v1)), hh = Math.abs(f.Y(v0) - f.Y(v1));
+    if (color) { ctx.fillStyle = color; ctx.fillRect(xa, ya, f.bw, hh); }
+    if (outline) {
+      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 1; if (dash) ctx.setLineDash([4, 3]);
+      ctx.strokeRect(xa + 0.5, ya + 0.5, f.bw - 1, Math.max(0, hh - 1)); ctx.restore();
+    }
+  }
+
+  function seqRange(arr, len, extra) {
+    let lo = 0, hi = 0;
+    for (let i = 0; i < len; i++) { lo = Math.min(lo, arr[i]); hi = Math.max(hi, arr[i]); }
+    if (extra) { lo = Math.min(lo, extra[0]); hi = Math.max(hi, extra[1]); }
+    return [lo, hi];
+  }
+
+  function stackRange() {
+    let lo = 0, hi = 0;
+    posStack.fill(0); negStack.fill(0);
+    for (let m = 0; m < Lx; m++) for (let k = 0; k < Lh; k++) {
+      const v = x[m] * h[k];
+      if (v >= 0) posStack[m + k] += v; else negStack[m + k] += v;
+    }
+    for (let i = 0; i < Ly; i++) { hi = Math.max(hi, posStack[i]); lo = Math.min(lo, negStack[i]); }
+    return [lo, hi];
+  }
+
+  function draw() {
+    dirty = false;
+    if (state.tab === 'story') drawStory();
+    else if (state.tab === 'flip') drawFlip();
+    else drawCont();
+  }
+
+  function drawStory() {
+    const { ctx, w } = prepare($('cv-story'), 520);
+    const top = { x: 0, y: 4, w, h: 250 }, bot = { x: 0, y: 262, w, h: 250 };
+    const nMax = Math.max(Ly - 1, 1);
+    const [xl, xh] = seqRange(x, Lx);
+    if (state.step === 1) {
+      const f = frame(ctx, top, -1, Lx, xl, xh, 'x[n]');
+      for (let m = 0; m < Lx; m++) bar(ctx, f, m, 0, x[m], '#bdbdb5');
+      // Below: the same samples as separate impulses, one colour each, spread out to read as parts.
+      const g = frame(ctx, bot, -1, Lx, xl, xh, 'x[n] = Σ x[m]·δ[n−m]: her renk ayrı bir impuls');
+      for (let m = 0; m < Lx; m++) {
+        bar(ctx, g, m, 0, x[m], col(m));
+        ctx.fillStyle = INK; ctx.font = '10px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.fillText('m=' + m, g.X(m), Math.min(g.Y(x[m]), g.Y(0)) - 2);
+      }
+    } else if (state.step === 2) {
+      const f = frame(ctx, top, -1, Lh + 1, 0, 1, 'giriş: δ[n]');
+      bar(ctx, f, 0, 0, 1, PAL[4]);
+      const [hl, hh] = seqRange(h, Lh);
+      const g = frame(ctx, bot, -1, Lh + 1, hl, hh, 'çıkış: h[n]');
+      for (let k = 0; k < Lh; k++) bar(ctx, g, k, 0, h[k], PAL[4]);
+    } else if (state.step === 3) {
+      const m = state.m;
+      const f = frame(ctx, top, -1, nMax + 1, xl, xh, `girdi parçası: x[${m}]·δ[n−${m}]`);
+      for (let i = 0; i < Lx; i++) if (i !== m) bar(ctx, f, i, 0, x[i], null, true, true);
+      bar(ctx, f, m, 0, x[m], col(m));
+      const [hl, hh] = seqRange(h, Lh);
+      const lo = Math.min(hl, hl * x[m], hh * x[m]), hi = Math.max(hh, hl * x[m], hh * x[m]);
+      const g = frame(ctx, bot, -1, nMax + 1, lo, hi, `çıktı parçası: x[${m}]·h[n−${m}]  (kesikli: h[n−${m}])`);
+      for (let k = 0; k < Lh; k++) bar(ctx, g, m + k, 0, h[k], null, true, true);
+      for (let k = 0; k < Lh; k++) bar(ctx, g, m + k, 0, x[m] * h[k], col(m));
+    } else if (state.step === 4) {
+      const K = state.k;
+      const f = frame(ctx, top, -1, nMax + 1, xl, xh, `eklenen girdi parçaları: m = 0 … ${K - 1 < 0 ? '–' : K - 1}`);
+      for (let i = 0; i < Lx; i++) bar(ctx, f, i, 0, x[i], i < K ? col(i) : null, true, i >= K);
+      const [lo, hi] = stackRange();
+      const g = frame(ctx, bot, -1, nMax + 1, lo, hi, `kısmi toplam: Σ x[m]·h[n−m], m < ${K}`);
+      // Stack every part in its own colour: positives upward, negatives downward, in m order.
+      posStack.fill(0); negStack.fill(0);
+      for (let m = 0; m < K; m++) for (let k = 0; k < Lh; k++) {
+        const n = m + k, v = x[m] * h[k];
+        if (v >= 0) { bar(ctx, g, n, posStack[n], posStack[n] + v, col(m)); posStack[n] += v; }
+        else { bar(ctx, g, n, negStack[n], negStack[n] + v, col(m)); negStack[n] += v; }
+      }
+      // Partial-sum line (net value) drawn on top.
+      ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath();
+      for (let n = 0; n < Ly; n++) {
+        const v = posStack[n] + negStack[n];
+        if (n === 0) ctx.moveTo(g.X(n), g.Y(v)); else ctx.lineTo(g.X(n), g.Y(v));
+      }
+      ctx.stroke();
+      ctx.fillStyle = INK;
+      for (let n = 0; n < Ly; n++) { ctx.beginPath(); ctx.arc(g.X(n), g.Y(posStack[n] + negStack[n]), 3.5, 0, 2 * Math.PI); ctx.fill(); }
+      ctx.restore();
+    } else {
+      const [lo, hi] = seqRange(yDirect, Ly);
+      const f = frame(ctx, top, -1, nMax + 1, lo, hi, 'doğrudan konvolüsyon (çubuk) ve biriken toplam (nokta)');
+      for (let n = 0; n < Ly; n++) bar(ctx, f, n, 0, yDirect[n], PAL[4]);
+      ctx.fillStyle = INK;
+      for (let n = 0; n < Ly; n++) { ctx.beginPath(); ctx.arc(f.X(n), f.Y(yAcc[n]), 4, 0, 2 * Math.PI); ctx.fill(); }
+      let dmax = 0;
+      for (let n = 0; n < Ly; n++) dmax = Math.max(dmax, Math.abs(yAcc[n] - yDirect[n]));
+      const lim = Math.max(dmax, 1e-15);
+      const g = frame(ctx, bot, -1, nMax + 1, -lim, lim, `fark: biriken − doğrudan  (max |fark| = ${dmax.toExponential(1)})`);
+      for (let n = 0; n < Ly; n++) bar(ctx, g, n, 0, yAcc[n] - yDirect[n], PAL[5]);
+    }
+  }
+
+  function drawFlip() {
+    const n = state.n;
+    const { ctx, w } = prepare($('cv-flip'), 660);
+    const k0 = -Lh, k1 = Math.max(Lx, Ly);
+    const b1 = { x: 0, y: 4, w, h: 210 }, b2 = { x: 0, y: 222, w, h: 210 }, b3 = { x: 0, y: 440, w, h: 210 };
+    const [xl, xh] = seqRange(x, Lx);
+    const [hl, hh] = seqRange(h, Lh);
+    const f = frame(ctx, b1, k0, k1, Math.min(xl, hl), Math.max(xh, hh), `x[k] (dolu) ve ters çevrilip n = ${n} kaydırılmış h[n−k] (çerçeve)`, 'k');
+    for (let k = 0; k < Lx; k++) bar(ctx, f, k, 0, x[k], PAL[1]);
+    ctx.save(); ctx.lineWidth = 2;
+    for (let j = 0; j < Lh; j++) {
+      const k = n - j; // h[n−k] is non-zero where n − k = j
+      const xa = f.X(k) - f.bw / 2 - 3, ya = f.Y(Math.max(0, h[j])), hgt = Math.abs(f.Y(0) - f.Y(h[j]));
+      ctx.strokeStyle = PAL[5]; ctx.strokeRect(xa, ya, f.bw + 6, hgt);
+    }
+    ctx.restore();
+    let lo = 0, hi = 0;
+    for (let k = 0; k < Lx; k++) for (let j = 0; j < Lh; j++) { const v = x[k] * h[j]; lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    const g = frame(ctx, b2, k0, k1, lo, hi, `örtüşme çarpımı x[k]·h[${n}−k]`, 'k');
+    let s = 0;
+    for (let k = 0; k < Lx; k++) {
+      const j = n - k;
+      if (j >= 0 && j < Lh) { const v = x[k] * h[j]; s += v; bar(ctx, g, k, 0, v, PAL[2]); }
+    }
+    const [yl, yh] = seqRange(yFlip, Ly);
+    const q = frame(ctx, b3, k0, k1, yl, yh, `y[n] = Σ çarpımlar; y[${n}] = ${fmt(s)}`, 'n');
+    for (let i = 0; i <= n && i < Ly; i++) bar(ctx, q, i, 0, yFlip[i], i === n ? PAL[0] : PAL[4]);
+    for (let i = n + 1; i < Ly; i++) bar(ctx, q, i, 0, yAcc[i], null, true, true);
+    const err = maxDiff(yFlip, yAcc, Ly);
+    $('flip-eq').textContent = `Çevir-kaydır sonucu ile adım 4’ün biriken toplamı arasındaki en büyük fark: ${err.toExponential(1)} (kesikli çerçeveler: adım 4’ün sonucu). Aynı sayılar, yalnız toplama sırası farklı.`;
+  }
+
+  // ---------- continuous: x(t) = 1 − t/4 on [0, 4), h(t) = e^(−t) ----------
+  const DELTAS = [1, 0.5, 0.25, 0.125, 0.0625];
+  const T_IN = 4, T_END = 10;
+  const xC = (t) => (t >= 0 && t < T_IN ? 1 - t / T_IN : 0);
+  const hC = (t) => (t >= 0 ? Math.exp(-t) : 0);
+  // ∫₀^a (1 − τ/4) e^{−(t−τ)} dτ with a = min(t, 4): e^{−t}[e^a(5 − a)/4 − 5/4].
+  const yExact = (t) => (t < 0 ? 0 : t < T_IN ? (5 - t) / 4 - 1.25 * Math.exp(-t) : Math.exp(-t) * (Math.exp(T_IN) / 4 - 1.25));
+
+  function drawCont() {
+    const D = DELTAS[state.d], M = Math.round(T_IN / D); // M ≤ 64 pulses
+    const { ctx, w } = prepare($('cv-cont'), 520);
+    const top = { x: 0, y: 4, w, h: 180 }, bot = { x: 0, y: 192, w, h: 320 };
+    const f = frame(ctx, top, -0.5, T_END, 0, 1.1, `x(t) (çizgi) ve Δ = ${D} genişliğinde ${M} darbe, yükseklik x(mΔ)`, 't');
+    ctx.save();
+    for (let m = 0; m < M; m++) {
+      const v = xC(m * D), x0 = f.X(m * D), wd = f.X((m + 1) * D) - x0;
+      ctx.fillStyle = col(m); ctx.globalAlpha = 0.85;
+      ctx.fillRect(x0, f.Y(v), wd, f.Y(0) - f.Y(v));
+      ctx.globalAlpha = 1; ctx.strokeStyle = INK; ctx.lineWidth = 0.8;
+      ctx.strokeRect(x0 + 0.5, f.Y(v) + 0.5, wd - 1, Math.max(0, f.Y(0) - f.Y(v) - 1));
+    }
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.moveTo(f.X(0), f.Y(1)); ctx.lineTo(f.X(T_IN), f.Y(0));
+    ctx.stroke();
+    ctx.restore();
+    const g = frame(ctx, bot, -0.5, T_END, 0, 0.62, 'yanıtlar ve toplamları', 't');
+    const px0 = Math.ceil(g.X(0)), px1 = Math.floor(g.X(T_END));
+    const tOf = (px) => (px - g.X(0)) / (g.X(1) - g.X(0));
+    // Individual pulse responses Δ·x(mΔ)·h(t − mΔ) (thin), sampled per pixel; no arrays kept.
+    ctx.save(); ctx.lineWidth = 1;
+    for (let m = 0; m < M; m++) {
+      ctx.strokeStyle = PAL[1]; ctx.beginPath();
+      let started = false;
+      for (let px = px0; px <= px1; px += 2) {
+        const t = tOf(px), v = D * xC(m * D) * hC(t - m * D);
+        if (!started) { ctx.moveTo(px, g.Y(v)); started = true; } else ctx.lineTo(px, g.Y(v));
+      }
+      ctx.stroke();
+    }
+    // Sum (bold) and the exact integral (dashed); track the max error on the way.
+    let err = 0;
+    ctx.strokeStyle = INK; ctx.lineWidth = 2.6; ctx.beginPath();
+    for (let px = px0; px <= px1; px++) {
+      const t = tOf(px);
+      let s = 0;
+      for (let m = 0; m < M; m++) s += D * xC(m * D) * hC(t - m * D);
+      err = Math.max(err, Math.abs(s - yExact(t)));
+      if (px === px0) ctx.moveTo(px, g.Y(s)); else ctx.lineTo(px, g.Y(s));
+    }
+    ctx.stroke();
+    ctx.strokeStyle = PAL[5]; ctx.lineWidth = 2; ctx.setLineDash([7, 5]); ctx.beginPath();
+    for (let px = px0; px <= px1; px++) { const t = tOf(px); if (px === px0) ctx.moveTo(px, g.Y(yExact(t))); else ctx.lineTo(px, g.Y(yExact(t))); }
+    ctx.stroke();
+    ctx.restore();
+    $('cont-err').textContent = `Δ = ${D}: toplam ile tam integral arasındaki en büyük fark ${err.toFixed(4)} (t = 0’da: ilk darbenin yanıtı hemen Δ·x(0) kadar sıçrar). Δ yarıya inince fark da yarıya iner: hata Δ ile orantılı, Δ → 0’da toplam integrale gider.`;
+  }
+
+  // ---------- start ----------
+  $('in-x').value = DEFAULT_X;
+  $('in-h').value = DEFAULT_H;
+  applyInput(DEFAULT_X, DEFAULT_H);
+})();
+</script>
+</body>
+</html>
