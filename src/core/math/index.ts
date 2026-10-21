@@ -5,3 +5,4 @@ export * from './complexStructure';
 export * from './integrate';
 export * from './signals';
 export * from './skew';
+export * from './spectral';
