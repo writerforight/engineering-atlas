@@ -34,6 +34,15 @@ export function Derivation() {
           tarafındaki <Tex tex="\Phi c" /> de bir ters DFT’dir (IFFT).
         </p>
       </Step>
+      <Step title="Gürültü katsayıya nasıl geçer" why="Alıcı lineer: r = s + w ise ĉ = c + (2/N)Φᵀw. Her örnekte bağımsız, varyansı σ² olan w için varyans (2/N)²·‖φ_j‖²·σ².">
+        <Tex block tex="\operatorname{Var}(\hat c_j-c_j)=\Big(\tfrac 2N\Big)^2\tfrac N2\,\sigma^2=\tfrac{2\sigma^2}{N}" />
+        <p className="prose">
+          Seviyeler 2 aralıklı, karar sınırı 1 uzakta. Katsayı başına sapma <Tex tex="\sigma\sqrt{2/N}" /> bu 1’e yaklaştıkça
+          hatalar başlar. Daha çok örnek (büyük N) aynı σ’yı daha iyi ortalar. Burada aralık hep 2: 64-QAM aynı σ’da
+          biraz daha çok hata yapar (iki komşulu iç seviyeler çoğalır), asıl bedel ise sinyal gücüdür; aynı SNR’de 64-QAM’in
+          seviyeleri birbirine çok daha yakın düşer.
+        </p>
+      </Step>
       <Step title="Nyquist neden kesin eşitsizlik" why="N = 2K’da son sinüs her örnekte sıfır: o sütun sıfır vektörü, bilgi taşımaz.">
         <Tex block tex="\sin\!\big(K\omega_0\tfrac{nT}{2K}\big)=\sin(\pi n)=0\quad\Rightarrow\quad f_s>2f_{\max}" />
       </Step>
