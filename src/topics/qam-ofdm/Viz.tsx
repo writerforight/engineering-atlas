@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   basisMatrix,
   decide,
+  matrixBits,
   ofdmSignal,
   qamLevels,
   randomCoeffs,
@@ -87,6 +88,26 @@ function MatrixTable({
   );
 }
 
+/** Bit groups in a row; with `reference`, bits that differ from it are marked. '?' = unreadable. */
+function BitRow({ groups, reference }: { groups: string[]; reference?: string[] }) {
+  return (
+    <span style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', letterSpacing: '0.08em' }}>
+      {groups.map((g, k) => (
+        <span key={k} title={`k=${k + 1}`}>
+          {[...g].map((c, j) => {
+            const bad = reference !== undefined && c !== reference[k]![j];
+            return (
+              <span key={j} className={bad ? 'bad' : undefined} style={bad ? { fontWeight: 700, textDecoration: 'underline' } : undefined}>
+                {c}
+              </span>
+            );
+          })}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export default function Viz() {
   const [K, setK] = useState(4);
   const [order, setOrder] = useState<number>(16);
@@ -108,6 +129,10 @@ export default function Viz() {
 
   const flatC = C.flat();
   const errors = decided.flat().filter((v, j) => v !== flatC[j]).length;
+  const sentBits = matrixBits(C, levels);
+  const gotBits = matrixBits(decided, levels);
+  const bitTotal = sentBits.join('').length;
+  const bitErrors = [...sentBits.join('')].filter((c, j) => c !== gotBits.join('')[j]).length;
   const finite = R.flat().map((v, j) => [v, Rf.flat()[j]!]).filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b));
   const dftGap = finite.reduce((m, [a, b]) => Math.max(m, Math.abs(a! - b!)), 0);
 
@@ -262,13 +287,25 @@ export default function Viz() {
         </div>
       </div>
 
-      <div className="panel readout">
-        <span>
-          Sembol hatası: <span className={errors === 0 ? 'ok' : 'bad'}>{errors}</span> / {2 * K}
-        </span>
-        <span>
-          <Tex tex="\max|\hat C_{\Phi^\top}-\hat C_{\mathrm{DFT}}|" /> = {fmtErr(dftGap)}
-        </span>
+      <div className="panel">
+        <p className="canvas-caption" style={{ marginTop: 0 }}>
+          8 · Atılan ve çekilen bitler (seviye başına {Math.log2(levels.length)} bit, Gray kodlu; her grup bir alt taşıyıcı: önce aₖ, sonra bₖ)
+        </p>
+        <div className="mat-table" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', overflowX: 'auto' }}>
+          <span style={{ color: 'var(--muted)' }}>atılan</span>
+          <BitRow groups={sentBits} />
+          <span style={{ color: 'var(--muted)' }}>çekilen</span>
+          <BitRow groups={gotBits} reference={sentBits} />
+        </div>
+        <div className="readout" style={{ marginTop: 10 }}>
+          <span>
+            Bit hatası: <span className={bitErrors === 0 ? 'ok' : 'bad'}>{bitErrors}</span> / {bitTotal} · BER ={' '}
+            {fmt(bitErrors / bitTotal, 3)} · sembol hatası: <span className={errors === 0 ? 'ok' : 'bad'}>{errors}</span> / {2 * K}
+          </span>
+          <span>
+            <Tex tex="\max|\hat C_{\Phi^\top}-\hat C_{\mathrm{DFT}}|" /> = {fmtErr(dftGap)}
+          </span>
+        </div>
       </div>
 
       {N === 2 * K && (

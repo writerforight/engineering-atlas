@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { basisMatrix, decide, ofdmSignal, qamLevels, randomCoeffs, receive, receiveDft, transmit } from './ofdm';
+import { basisMatrix, decide, levelBits, matrixBits, ofdmSignal, qamLevels, randomCoeffs, receive, receiveDft, transmit } from './ofdm';
 
 const seeded = (seed: number) => () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 
@@ -38,5 +38,16 @@ describe('QAM-OFDM', () => {
   it('decision picks nearest level', () => {
     expect(decide(0.4, [-3, -1, 1, 3])).toBe(1);
     expect(decide(-2.6, [-3, -1, 1, 3])).toBe(-3);
+  });
+
+  it('Gray bits: neighbours differ in one bit, NaN is unknown', () => {
+    const lv = qamLevels(64);
+    for (let i = 1; i < lv.length; i++) {
+      const a = levelBits(lv[i - 1]!, lv);
+      const b = levelBits(lv[i]!, lv);
+      expect([...a].filter((c, j) => c !== b[j]).length).toBe(1);
+    }
+    expect(levelBits(NaN, qamLevels(16))).toBe('??');
+    expect(matrixBits([[-3, 3]], qamLevels(16))).toEqual(['0010']);
   });
 });

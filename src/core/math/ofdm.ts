@@ -100,3 +100,19 @@ export function decide(v: number, levels: readonly number[]): number {
   if (!Number.isFinite(v)) return NaN;
   return levels.reduce((best, l) => (Math.abs(l - v) < Math.abs(best - v) ? l : best), levels[0]!);
 }
+
+/**
+ * Gray-coded bits of one QAM level: neighbouring levels differ in one bit, so a small
+ * decision error costs one bit. Unknown (NaN) or off-grid levels give '?' bits.
+ */
+export function levelBits(v: number, levels: readonly number[]): string {
+  const width = Math.round(Math.log2(levels.length));
+  const i = levels.indexOf(v);
+  if (i < 0) return '?'.repeat(width);
+  return (i ^ (i >> 1)).toString(2).padStart(width, '0');
+}
+
+/** Bit groups of C, one string per subcarrier: bits of a_k then b_k. */
+export function matrixBits(C: Mat, levels: readonly number[]): string[] {
+  return C.map(([a, b]) => levelBits(a!, levels) + levelBits(b!, levels));
+}
