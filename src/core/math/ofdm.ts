@@ -1,4 +1,5 @@
 import type { Mat } from './matrix';
+import { whiteNoise } from './spectral';
 
 /**
  * Real-valued QAM-OFDM over one symbol of length T = 1: subcarrier k (1..K) is the pair
@@ -115,4 +116,50 @@ export function levelBits(v: number, levels: readonly number[]): string {
 /** Bit groups of C, one string per subcarrier: bits of a_k then b_k. */
 export function matrixBits(C: Mat, levels: readonly number[]): string[] {
   return C.map(([a, b]) => levelBits(a!, levels) + levelBits(b!, levels));
+}
+
+/** Inverse of levelBits: Gray-coded bit string → level. */
+export function bitsToLevel(bits: string, levels: readonly number[]): number {
+  let b = parseInt(bits, 2);
+  for (let shift = b >> 1; shift > 0; shift >>= 1) b ^= shift;
+  return levels[b]!;
+}
+
+/** C from a bit string of length K·2·log₂L: per subcarrier the bits of a_k then b_k. */
+export function symbolFromBits(bits: string, K: number, levels: readonly number[]): Mat {
+  const w = Math.round(Math.log2(levels.length));
+  return Array.from({ length: K }, (_, k) => [
+    bitsToLevel(bits.slice(2 * k * w, (2 * k + 1) * w), levels),
+    bitsToLevel(bits.slice((2 * k + 1) * w, (2 * k + 2) * w), levels),
+  ]);
+}
+
+export function randomBits(n: number, rand: () => number = Math.random): string {
+  let s = '';
+  for (let i = 0; i < n; i++) s += rand() < 0.5 ? '0' : '1';
+  return s;
+}
+
+export interface SymbolRun {
+  C: Mat;
+  s: number[];
+  /** Received samples s + σw. */
+  r: number[];
+  decided: Mat;
+  rxBits: string;
+  bitErrors: number;
+}
+
+/** One symbol through the whole chain: bits → C → Φc → + noise → D⁻¹Φᵀr → decision → bits. */
+export function runSymbol(Phi: Mat, levels: readonly number[], bits: string, sigma: number, noiseSeed: number): SymbolRun {
+  const K = (Phi[0]?.length ?? 0) / 2;
+  const C = symbolFromBits(bits, K, levels);
+  const s = transmit(Phi, C);
+  const w = whiteNoise(s.length, 1, noiseSeed);
+  const r = s.map((v, n) => v + sigma * w[n]!);
+  const decided = receive(Phi, r).map((row) => row.map((v) => decide(v, levels)));
+  const rxBits = matrixBits(decided, levels).join('');
+  let bitErrors = 0;
+  for (let i = 0; i < bits.length; i++) if (rxBits[i] !== bits[i]) bitErrors++;
+  return { C, s, r, decided, rxBits, bitErrors };
 }

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import {
   basisMatrix,
   decide,
@@ -12,6 +12,7 @@ import {
   whiteNoise,
   type Mat,
 } from '../../core/math';
+import Stream, { type StreamSymbol } from './Stream';
 import { Callout, Canvas, Slider, Tex, dot, drawGridAxes, fmt, fmtErr, makeViewport, polyline, type DrawContext } from '../../core/ui';
 
 /** Levels per axis: powers of two only, so every level maps to a whole number of bits. */
@@ -90,6 +91,46 @@ function MatrixTable({
   );
 }
 
+/** Collapsible panel; the open state is remembered per viewer. Closed content is unmounted unless keepMounted. */
+function Panel({ id, title, children, keepMounted = false }: { id: string; title: ReactNode; children: ReactNode; keepMounted?: boolean }) {
+  const key = `qam-ofdm:panel:${id}`;
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(key) !== '0';
+    } catch {
+      return true;
+    }
+  });
+  const flip = () => {
+    setOpen((v) => {
+      try {
+        localStorage.setItem(key, v ? '0' : '1');
+      } catch {
+        /* storage blocked: state just isn't remembered */
+      }
+      return !v;
+    });
+  };
+  return (
+    <div className="panel">
+      <button
+        onClick={flip}
+        aria-expanded={open}
+        className="canvas-caption"
+        style={{ all: 'unset', cursor: 'pointer', display: 'flex', gap: 8, alignItems: 'baseline', width: '100%', color: 'var(--muted)', fontSize: 13 }}
+      >
+        <span style={{ fontFamily: 'var(--mono)', width: 10 }}>{open ? '▾' : '▸'}</span>
+        <span>{title}</span>
+      </button>
+      {(open || keepMounted) && (
+        <div hidden={!open} style={{ marginTop: 8 }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Bit groups in a row; with `reference`, bits that differ from it are marked. '?' = unreadable. */
 function BitRow({ groups, reference }: { groups: string[]; reference?: string[] }) {
   return (
@@ -116,22 +157,26 @@ export default function Viz() {
   const [ratio, setRatio] = useState(2);
   const [seed, setSeed] = useState(0);
   const [shown, setShown] = useState<Record<Layer, boolean>>({ signal: true, carriers: false, samples: true, seen: true });
-  const [showMats, setShowMats] = useState(true);
+  const [streamSym, setStreamSym] = useState<StreamSymbol | null>(null);
   const [sigma, setSigma] = useState(0);
   const [noiseSeed, setNoiseSeed] = useState(1);
 
   const levels = useMemo(() => qamLevels(L * L), [L]);
   // seed only forces a fresh draw when "Rastgele" is pressed.
-  const C = useMemo(() => randomCoeffs(K, levels), [K, levels, seed]);
+  const randomC = useMemo(() => randomCoeffs(K, levels), [K, levels, seed]);
+  // While streaming, every panel follows the symbol in flight (if it was made with the current K and L).
+  const live = streamSym && streamSym.K === K && streamSym.L === L ? streamSym : null;
+  const C = live ? live.C : randomC;
+  const effSeed = live ? live.seed : noiseSeed * 7919;
   const N = Math.max(1, Math.round(ratio * K));
   const Phi = useMemo(() => basisMatrix(K, N), [K, N]);
   const PhiT = useMemo(() => Phi[0]!.map((_, j) => Phi.map((row) => row[j]!)), [Phi]);
   const s = useMemo(() => transmit(Phi, C), [Phi, C]);
   // Fixed unit noise realization scaled by σ, so moving the slider only changes its size.
   const r = useMemo(() => {
-    const w = whiteNoise(N, 1, noiseSeed * 7919);
+    const w = whiteNoise(N, 1, effSeed);
     return s.map((v, n) => v + sigma * w[n]!);
-  }, [s, N, sigma, noiseSeed]);
+  }, [s, N, sigma, effSeed]);
   const R = useMemo(() => receive(Phi, r), [Phi, r]);
   const Rf = useMemo(() => receiveDft(r, K), [r, K]);
   const power = s.reduce((acc, v) => acc + v * v, 0) / N;
@@ -209,14 +254,11 @@ export default function Viz() {
               {l} → {l * l}-QAM
             </button>
           ))}
-          <button className="btn" onClick={() => setSeed((v) => v + 1)}>
+          <button className="btn" onClick={() => setSeed((v) => v + 1)} disabled={!!live}>
             Rastgele
           </button>
-          <button className="btn" onClick={() => setNoiseSeed((v) => v + 1)} disabled={sigma === 0}>
+          <button className="btn" onClick={() => setNoiseSeed((v) => v + 1)} disabled={sigma === 0 || !!live}>
             Yeni gürültü
-          </button>
-          <button className="btn" aria-pressed={showMats} onClick={() => setShowMats((v) => !v)}>
-            Φ ve Φᵀ matrislerini {showMats ? 'gizle' : 'göster'}
           </button>
         </div>
         <p className="canvas-caption">
@@ -225,23 +267,24 @@ export default function Viz() {
         </p>
       </div>
 
+      <Panel id="stream" keepMounted title={<>Canlı veri akışı ve konsol{live ? ` · aşağıdaki paneller #${live.index} sembolünü gösteriyor` : ''}</>}>
+        <Stream K={K} L={L} levels={levels} Phi={Phi} sigma={sigma} onSymbol={setStreamSym} />
+      </Panel>
+
       <div className="viz-grid">
-        <div className="panel">
-          <p className="canvas-caption" style={{ marginTop: 0 }}>1 · Taşıyıcı (seviye belirleme) matrisi</p>
+        <Panel id="basis" title={<>1 · Taşıyıcı (seviye belirleme) matrisi</>}>
           <Tex
             block
             tex={`B(t)=\\begin{bmatrix}${Array.from({ length: K }, (_, i) => `\\cos ${i === 0 ? '' : i + 1}\\omega_0 t & \\sin ${i === 0 ? '' : i + 1}\\omega_0 t`).join('\\\\')}\\end{bmatrix}`}
           />
-        </div>
-        <div className="panel">
-          <p className="canvas-caption" style={{ marginTop: 0 }}>2 · Katsayı matrisi C = [aₖ bₖ]</p>
+        </Panel>
+        <Panel id="coeffs" title={<>2 · Katsayı matrisi C = [aₖ bₖ]</>}>
           <MatrixTable M={C} rowLabels={rowsK} colLabels={['aₖ (cos)', 'bₖ (sin)']} scale={levels.at(-1)!} digits={0} />
           <Tex block tex="s(t)=\sum_{k=1}^{K} a_k\cos k\omega_0 t + b_k\sin k\omega_0 t" />
-        </div>
+        </Panel>
       </div>
 
-      <div className="panel">
-        <p className="canvas-caption" style={{ marginTop: 0 }}>3 · Gönderilen fonksiyon ve örnekleri (lejanttan aç/kapat)</p>
+      <Panel id="signal" title={<>3 · Gönderilen fonksiyon ve örnekleri (lejanttan aç/kapat)</>}>
         <Canvas draw={draw} aspect={0.36} maxHeight={340} ariaLabel="OFDM sinyali ve örnekleri" />
         <div className="legend" style={{ marginTop: 8 }}>
           {LAYERS.map((l) => (
@@ -259,41 +302,30 @@ export default function Viz() {
             </span>
           ))}
         </div>
-      </div>
+      </Panel>
 
-      {showMats && (
         <div className="controls">
-          <div className="panel">
-            <p className="canvas-caption" style={{ marginTop: 0 }}>
-              4 · Verici: <Tex tex={`\\Phi\\ (${N}\\times${2 * K}),\\ \\Phi_{nj}=\\cos/\\sin(k\\omega_0 t_n),\\ t_n=n/N`} />,{' '}
-              <Tex tex="s=\Phi\,\mathrm{vec}(C),\ r=s+w" />
-            </p>
+          <Panel id="tx" title={<>4 · Verici: <Tex tex={`\\Phi\\ (${N}\\times${2 * K}),\\ \\Phi_{nj}=\\cos/\\sin(k\\omega_0 t_n),\\ t_n=n/N`} />,{' '}
+              <Tex tex="s=\Phi\,\mathrm{vec}(C),\ r=s+w" /></>}>
             <MatrixTable
               M={Phi.map((row, n) => [...row, s[n]!, r[n]!])}
               rowLabels={Array.from({ length: N }, (_, n) => `n=${n}`)}
               colLabels={[...Array.from({ length: 2 * K }, (_, j) => colLabel(j)), 's[n]', 'r[n]']}
               scale={1}
             />
-          </div>
-          <div className="panel">
-            <p className="canvas-caption" style={{ marginTop: 0 }}>
-              5 · Alıcı: <Tex tex={`\\Phi^\\top\\ (${2 * K}\\times${N})`} />, her satır bir taşıyıcıyla korelasyon
-            </p>
+          </Panel>
+          <Panel id="rx" title={<>5 · Alıcı: <Tex tex={`\\Phi^\\top\\ (${2 * K}\\times${N})`} />, her satır bir taşıyıcıyla korelasyon</>}>
             <MatrixTable
               M={PhiT}
               rowLabels={Array.from({ length: 2 * K }, (_, j) => colLabel(j))}
               colLabels={Array.from({ length: N }, (_, n) => `n=${n}`)}
               scale={1}
             />
-          </div>
+          </Panel>
         </div>
-      )}
 
       <div className="viz-grid">
-        <div className="panel">
-          <p className="canvas-caption" style={{ marginTop: 0 }}>
-            6 · Okunan <Tex tex="\hat C=D^{-1}\Phi^\top r" /> (<Tex tex="D=\mathrm{diag}\,\|\varphi_j\|^2" />) ve karar
-          </p>
+        <Panel id="rhat" title={<>6 · Okunan <Tex tex="\hat C=D^{-1}\Phi^\top r" /> (<Tex tex="D=\mathrm{diag}\,\|\varphi_j\|^2" />) ve karar</>}>
           <MatrixTable
             M={R.map((row, i) => [...row, ...decided[i]!])}
             rowLabels={rowsK}
@@ -301,19 +333,13 @@ export default function Viz() {
             scale={levels.at(-1)!}
             cellClass={(i, j) => (j >= 2 ? cOk(i, j - 2) : undefined)}
           />
-        </div>
-        <div className="panel">
-          <p className="canvas-caption" style={{ marginTop: 0 }}>
-            7 · Aynısı DFT ile: <Tex tex="X_k=\tfrac N2(a_k-i\,b_k)\Rightarrow a_k=\tfrac2N\mathrm{Re}X_k,\ b_k=-\tfrac2N\mathrm{Im}X_k" />
-          </p>
+        </Panel>
+        <Panel id="dft" title={<>7 · Aynısı DFT ile: <Tex tex="X_k=\tfrac N2(a_k-i\,b_k)\Rightarrow a_k=\tfrac2N\mathrm{Re}X_k,\ b_k=-\tfrac2N\mathrm{Im}X_k" /></>}>
           <MatrixTable M={Rf} rowLabels={rowsK} colLabels={['âₖ (DFT)', 'b̂ₖ (DFT)']} scale={levels.at(-1)!} />
-        </div>
+        </Panel>
       </div>
 
-      <div className="panel">
-        <p className="canvas-caption" style={{ marginTop: 0 }}>
-          8 · Atılan ve çekilen bitler (seviye başına {Math.log2(levels.length)} bit, Gray kodlu; her grup bir alt taşıyıcı: önce aₖ, sonra bₖ)
-        </p>
+      <Panel id="bits" title={<>8 · Atılan ve çekilen bitler (seviye başına {Math.log2(levels.length)} bit, Gray kodlu; her grup bir alt taşıyıcı: önce aₖ, sonra bₖ)</>}>
         <div className="mat-table" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', overflowX: 'auto' }}>
           <span style={{ color: 'var(--muted)' }}>atılan</span>
           <BitRow groups={sentBits} />
@@ -335,7 +361,7 @@ export default function Viz() {
             <Tex tex="\max|\hat C_{\Phi^\top}-\hat C_{\mathrm{DFT}}|" /> = {fmtErr(dftGap)}
           </span>
         </div>
-      </div>
+      </Panel>
 
       {N === 2 * K && (
         <Callout kind="warn" title="Tam 2 kat: en yüksek sinüs kayboldu">

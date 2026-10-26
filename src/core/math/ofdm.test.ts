@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { basisMatrix, decide, levelBits, matrixBits, ofdmSignal, qamLevels, randomCoeffs, receive, receiveDft, transmit } from './ofdm';
+import { basisMatrix, bitsToLevel, decide, levelBits, matrixBits, randomBits, runSymbol, symbolFromBits, ofdmSignal, qamLevels, randomCoeffs, receive, receiveDft, transmit } from './ofdm';
 
 const seeded = (seed: number) => () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 
@@ -49,5 +49,23 @@ describe('QAM-OFDM', () => {
     }
     expect(levelBits(NaN, qamLevels(16))).toBe('??');
     expect(matrixBits([[-3, 3]], qamLevels(16))).toEqual(['0010']);
+  });
+
+  it('bits → level → bits round trip, and the noiseless chain is error-free', () => {
+    const lv = qamLevels(256);
+    for (const l of lv) expect(bitsToLevel(levelBits(l, lv), lv)).toBe(l);
+    const bits = randomBits(5 * 2 * 4, seeded(5));
+    expect(matrixBits(symbolFromBits(bits, 5, lv), lv).join('')).toBe(bits);
+    const run = runSymbol(basisMatrix(5, 11), lv, bits, 0, 1);
+    expect(run.rxBits).toBe(bits);
+    expect(run.bitErrors).toBe(0);
+  });
+
+  it('heavy noise causes bit errors', () => {
+    const lv = qamLevels(16);
+    const bits = randomBits(4 * 2 * 2 * 50, seeded(2));
+    let errs = 0;
+    for (let i = 0; i < 50; i++) errs += runSymbol(basisMatrix(4, 9), lv, bits.slice(i * 16, i * 16 + 16), 3, i + 1).bitErrors;
+    expect(errs).toBeGreaterThan(0);
   });
 });
