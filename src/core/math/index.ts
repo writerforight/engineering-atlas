@@ -7,3 +7,4 @@ export * from './signals';
 export * from './skew';
 export * from './spectral';
 export * from './ofdm';
+export * from './expr';
