@@ -24,13 +24,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            sticker-maker/package-lock.json
       - run: npm ci
       - run: npm test
-      - run: npm ci --prefix sticker-maker
-      - run: npm test --prefix sticker-maker
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
