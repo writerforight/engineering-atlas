@@ -521,3 +521,12 @@ footer {
   font-size: 13px;
   padding: 20px 0 32px;
 }
+
+/* matrix equations laid out side by side (convolution-dft); scrolls instead of shrinking */
+.mat-eq {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
