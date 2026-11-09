@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' https:; object-src 'none'; base-uri 'none'; form-action 'none'" />
+<meta name="description" content="Görselden WhatsApp ve Telegram çıkartması: şekil, kenarlık, yazı, doğrulama ve dışa aktarma. Kurulum yok." />
+<title>Çıkartma Atölyesi</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="stylesheet" href="web/style.css" />
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-inner">
+    <div>
+      <h1>Çıkartma Atölyesi</h1>
+      <p class="lede">Görsel yükle, şeklini seç, kenarlık ya da yazı ekle; tek tıkla WhatsApp paketi (ZIP) ve PNG al. Her şey tarayıcında çalışır, görsel hiçbir sunucuya gitmez.</p>
+    </div>
+    <ol class="flow" aria-label="Akış">
+      <li>Yükle</li><li>Şekil</li><li>Kenarlık / yazı</li><li>Önizle</li><li>Dışa aktar</li>
+    </ol>
+  </div>
+</header>
+
+<main class="wrap grid">
+  <div class="steps">
+    <section class="step" aria-labelledby="h-upload">
+      <h2 id="h-upload"><span class="n">1</span> Görsel</h2>
+      <label class="drop" id="drop" for="file">
+        <input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" multiple />
+        <strong>Görsel seç ya da buraya sürükle</strong>
+        <span>PNG, JPEG, WebP, GIF, BMP · en fazla 20 MB · en az 64 px · paket için 30 görsele kadar · yapıştırma (Ctrl+V) da çalışır</span>
+      </label>
+      <ul class="sources" id="sources" aria-label="Yüklenen görseller"></ul>
+      <p class="hint" id="sample-note">Şu an bir <b>örnek görsel</b> yüklü. Kendi görselini yükleyince yerini alır.</p>
+    </section>
+
+    <section class="step" aria-labelledby="h-shape">
+      <h2 id="h-shape"><span class="n">2</span> Şekil</h2>
+      <div class="seg" role="radiogroup" aria-label="Şekil">
+        <label><input type="radio" name="shape" id="shape-square" value="square" /><span><i class="ico sq"></i>Kare</span></label>
+        <label><input type="radio" name="shape" id="shape-rounded" value="rounded" checked /><span><i class="ico rd"></i>Yuvarlatılmış</span></label>
+        <label><input type="radio" name="shape" id="shape-cutout" value="cutout" /><span><i class="ico co"></i>Kesip çıkar</span></label>
+      </div>
+      <div class="row" id="row-radius">
+        <label for="radius">Köşe yarıçapı</label>
+        <input id="radius" type="range" min="0.02" max="0.5" step="0.01" value="0.18" />
+        <output id="radius-out" for="radius"></output>
+      </div>
+      <div class="row" id="row-tolerance" hidden>
+        <label for="tolerance">Arka plan toleransı</label>
+        <input id="tolerance" type="range" min="2" max="90" step="1" value="30" />
+        <output id="tolerance-out" for="tolerance"></output>
+      </div>
+      <p class="hint" id="cutout-hint" hidden>Kesip çıkarma, kenarlara değen düz renkli arka planı siler. Saydam PNG'lerde mevcut saydamlık kullanılır. Karmaşık fotoğraf arka planlarında sonuç kusurlu olabilir.</p>
+      <div class="row">
+        <label for="margin">Kenar boşluğu</label>
+        <input id="margin" type="range" min="0" max="64" step="1" value="16" />
+        <output id="margin-out" for="margin"></output>
+      </div>
+    </section>
+
+    <section class="step" aria-labelledby="h-style">
+      <h2 id="h-style"><span class="n">3</span> Kenarlık ve yazı <small>isteğe bağlı</small></h2>
+      <div class="row">
+        <label for="outline">Kenarlık kalınlığı</label>
+        <input id="outline" type="range" min="0" max="32" step="1" value="0" />
+        <output id="outline-out" for="outline"></output>
+        <input id="outline-color" type="color" value="#ffffff" aria-label="Kenarlık rengi" />
+      </div>
+      <div class="row text-row">
+        <label for="text">Yazı</label>
+        <input id="text" type="text" maxlength="80" placeholder="ör. Günaydın!" autocomplete="off" />
+      </div>
+      <div class="row">
+        <label for="text-size">Yazı boyu</label>
+        <input id="text-size" type="range" min="24" max="140" step="2" value="72" />
+        <output id="text-size-out" for="text-size"></output>
+      </div>
+      <div class="row">
+        <label for="text-pos">Konum</label>
+        <select id="text-pos">
+          <option value="top">Üst</option>
+          <option value="center">Orta</option>
+          <option value="bottom" selected>Alt</option>
+        </select>
+        <input id="text-color" type="color" value="#ffffff" aria-label="Yazı rengi" />
+        <input id="text-stroke" type="color" value="#000000" aria-label="Yazı kontur rengi" />
+      </div>
+    </section>
+  </div>
+
+  <aside class="side">
+    <section class="step preview" aria-labelledby="h-preview">
+      <h2 id="h-preview"><span class="n">4</span> Önizleme</h2>
+      <div class="stage" id="stage" data-bg="checker">
+        <canvas id="preview" width="512" height="512" aria-label="Çıkartma önizlemesi"></canvas>
+      </div>
+      <div class="seg small" role="radiogroup" aria-label="Önizleme zemini">
+        <label><input type="radio" name="bg" value="checker" checked /><span>Saydamlık</span></label>
+        <label><input type="radio" name="bg" value="chat-light" /><span>Açık sohbet</span></label>
+        <label><input type="radio" name="bg" value="chat-dark" /><span>Koyu sohbet</span></label>
+      </div>
+      <ul class="checks" id="checks" aria-live="polite"></ul>
+      <ul class="notes" id="notes"></ul>
+    </section>
+
+    <section class="step" aria-labelledby="h-export">
+      <h2 id="h-export"><span class="n">5</span> Dışa aktar</h2>
+
+      <fieldset class="exp">
+        <legend><label><input type="checkbox" id="x-whatsapp" checked /> WhatsApp paketi (ZIP)</label></legend>
+        <div class="fields">
+          <label>Paket adı <input id="wa-name" type="text" maxlength="128" value="Çıkartmalarım" /></label>
+          <label>Yayıncı <input id="wa-publisher" type="text" maxlength="128" value="Ben" /></label>
+          <label>Emoji (en fazla 3) <input id="wa-emoji" type="text" value="😀" /></label>
+          <label class="check"><input id="wa-fill" type="checkbox" checked /> 3'ten az görsel varsa varyantlarla (başka şekil / kenarlık) 3'e tamamla</label>
+        </div>
+      </fieldset>
+
+      <fieldset class="exp">
+        <legend><label><input type="checkbox" id="x-png" checked /> PNG indir (512×512, saydam)</label></legend>
+      </fieldset>
+
+      <fieldset class="exp">
+        <legend><label><input type="checkbox" id="x-github" /> GitHub deposuna kaydet</label></legend>
+        <div class="fields">
+          <label>Depo <input id="gh-repo" type="text" placeholder="kullanıcı/depo" autocomplete="off" spellcheck="false" /></label>
+          <label>Dal <input id="gh-branch" type="text" placeholder="varsayılan dal" autocomplete="off" spellcheck="false" /></label>
+          <label>Klasör <input id="gh-dir" type="text" value="stickers" autocomplete="off" spellcheck="false" /></label>
+          <label>Token <input id="gh-token" type="password" placeholder="github_pat_…" autocomplete="off" spellcheck="false" /></label>
+          <label class="check"><input id="gh-remember" type="checkbox" /> Bu sekme kapanana kadar hatırla</label>
+          <p class="hint">İnce ayarlı (fine-grained) token oluştur: yalnız bu depo, <b>Contents: Read and write</b>. Token yalnız tarayıcında kalır ve yalnız api.github.com'a gider; sayfanın koduna ya da depoya yazılmaz.</p>
+        </div>
+      </fieldset>
+
+      <fieldset class="exp">
+        <legend><label><input type="checkbox" id="x-telegram" /> Telegram seti</label></legend>
+        <div class="fields">
+          <p class="hint">Bot token gizli kalmalı, bu yüzden Telegram bu genel sayfada doğrudan çalışmaz. İki yol: komut satırı ya da kendi sunucu fonksiyonun.</p>
+          <label>Kullanıcı kimliği <input id="tg-user" type="text" inputmode="numeric" placeholder="ör. 123456789" autocomplete="off" /></label>
+          <label>Set kısa adı <input id="tg-set" type="text" placeholder="ör. benim_setim" autocomplete="off" spellcheck="false" /></label>
+          <label>Sunucu fonksiyonu adresi (isteğe bağlı) <input id="tg-url" type="url" placeholder="https://…/telegram" autocomplete="off" spellcheck="false" /></label>
+          <div class="cmd">
+            <code id="tg-cmd"></code>
+            <button type="button" class="ghost" id="tg-copy">Kopyala</button>
+          </div>
+        </div>
+      </fieldset>
+
+      <button type="button" class="primary" id="export">Dışa aktar</button>
+      <div class="results" id="results" aria-live="polite"></div>
+    </section>
+  </aside>
+</main>
+
+<footer class="wrap foot">
+  <p>Aynı boru hattı komut satırında da var: <code>node sticker-maker/cli/sticker.mjs make görsel.jpg --export whatsapp,telegram</code>. Kaynak: <a href="https://github.com/writerforight/engineering-atlas/tree/main/sticker-maker" target="_blank" rel="noopener">sticker-maker/</a></p>
+</footer>
+
+<script type="module" src="web/app.js"></script>
+</body>
+</html>

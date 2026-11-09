@@ -33,6 +33,8 @@ Click to jump straight in:
 - **Your own coordinate system + a scalar field**: [interactive: pick 1, 2 or 3 dimensions, type x = f₁(a,b,…), then T; shaded 3D surface / point cloud / SVD projection](https://writerforight.github.io/engineering-atlas/#/topic/coordinate-field?section=etkilesim) · [derivation](https://writerforight.github.io/engineering-atlas/#/topic/coordinate-field?section=turetme)
 - **Laplace of an integral, F(s)/s**: [interactive](https://writerforight.github.io/engineering-atlas/#/topic/laplace-integration?section=etkilesim) · [derivation](https://writerforight.github.io/engineering-atlas/#/topic/laplace-integration?section=turetme)
 
+Tool: [**Çıkartma Atölyesi / sticker maker**](https://writerforight.github.io/engineering-atlas/sticker-maker/) ([`sticker-maker/`](sticker-maker/README.md)): upload an image, pick square / rounded / cut-out, add an outline or text, export a WhatsApp ZIP (WebP ≤ 100 KB, 96×96 tray, 3–30 stickers, metadata), PNGs, or commit them to `stickers/` of any repo. Same pipeline as a CLI (`node sticker-maker/cli/sticker.mjs`), which also creates Telegram sets via the Bot API. Copied into the site build by `sticker-maker/scripts/copy-web.mjs`.
+
 Standalone page (not part of the site build): [`convolution-story/`](convolution-story/README.md), the convolution story as a single offline `index.html` (double-click to open, no network, no storage).
 
 Deep links: `#/topic/<slug>?tab=<tab>&section=<sezgi|etkilesim|turetme|yorum>`. The tab in the URL
