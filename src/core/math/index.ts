@@ -10,3 +10,4 @@ export * from './ofdm';
 export * from './expr';
 export * from './trigProjection';
 export * from './convolution';
+export * from './interpolation';
