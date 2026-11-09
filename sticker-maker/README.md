@@ -92,13 +92,13 @@ Sayfa token'ı yalnız `api.github.com`'a gönderir; "hatırla" seçilirse yaln�
 ## Güvenlik
 
 - Görseller tarayıcıdan çıkmaz (GitHub'a kaydet ve Telegram fonksiyonu hariç, onlar da yalnız seçilirse).
-- CSP: `script-src 'self'`; harici betik, yazı tipi, analitik yok. Kullanıcı metni yalnız `textContent` ile yazılır.
+- CSP: `script-src 'self' 'wasm-unsafe-eval'` (WASM yalnız WebP yedeği için); harici betik, yazı tipi, analitik yok. Kullanıcı metni yalnız `textContent` ile yazılır.
 - Telegram bot token'ı hiçbir zaman genel sayfaya girmez: `server/` ve `cli/` klasörleri siteye kopyalanmaz
   (`scripts/copy-web.mjs` yalnız `index.html`, `web/`, `core/` kopyalar).
 
 ## Sınırlar
 
-- **Safari** tuvalden WebP üretemiyor: WhatsApp ve Telegram dışa aktarımı Chrome, Edge, Firefox ya da CLI ile çalışır; PNG her yerde çalışır.
+- **Safari ve iOS'taki bütün tarayıcılar** tuvalden WebP üretemiyor. Sayfa bunu algılayınca repoya gömülü libwebp WASM kodlayıcısına geçer (`web/vendor/webp/`, ~280 KB, yalnız gerektiğinde yüklenir). Önizlemedeki kontrol satırı hangi kodlayıcının kullanıldığını gösterir. Çok eski Safari (< 16) WASM'ı bu sayfanın güvenlik politikası altında çalıştıramaz.
 - **Kesip çıkarma** yapay zekâ ile değil, renk benzerliğiyle çalışır: düz ya da sade arka planlarda iyi, kalabalık fotoğraflarda kusurlu olabilir. En iyi sonuç saydam PNG ile alınır.
 - **WhatsApp ZIP'i doğrudan içe aktarmaz.** ZIP, `.wastickers` içe aktaran bir uygulamayla (dosya uzantısını `.wastickers` yapıp) ya da WhatsApp'ın resmî örnek uygulamasına (`contents.json` biçimi) koyularak kullanılır.
   Tek tek çıkartmalar WhatsApp Web / masaüstünde "Çıkartma oluştur" ile de yüklenebilir.

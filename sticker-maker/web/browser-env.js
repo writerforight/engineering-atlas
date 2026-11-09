@@ -1,5 +1,25 @@
 // Browser implementation of the pipeline env (HTMLCanvasElement).
 
+import { encodeWebpWasm } from './webp-wasm.js';
+
+function canvasEncode(canvas, mime, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return reject(new Error('Görsel kodlanamadı.'));
+        // Safari silently returns PNG when asked for WebP.
+        if (blob.type !== mime) return resolve(null);
+        blob.arrayBuffer().then((b) => resolve(new Uint8Array(b)), reject);
+      },
+      mime,
+      quality,
+    );
+  });
+}
+
+// null = not probed yet. `?webp=wasm` forces the fallback (for testing).
+let nativeWebp = new URLSearchParams(globalThis.location?.search || '').get('webp') === 'wasm' ? false : null;
+
 export const browserEnv = {
   createCanvas(w, h) {
     const c = document.createElement('canvas');
@@ -7,21 +27,21 @@ export const browserEnv = {
     c.height = h;
     return c;
   },
-  encode(canvas, mime, quality) {
-    return new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) return reject(new Error('Görsel kodlanamadı.'));
-          // Safari silently returns PNG when asked for WebP: report it as such.
-          if (blob.type !== mime) {
-            return reject(new Error(`Bu tarayıcı ${mime.replace('image/', '').toUpperCase()} üretemiyor (Safari'de WebP yok). Chrome, Edge ya da Firefox kullan, ya da komut satırı sürümünü çalıştır.`));
-          }
-          blob.arrayBuffer().then((b) => resolve(new Uint8Array(b)), reject);
-        },
-        mime,
-        quality,
-      );
-    });
+  async encode(canvas, mime, quality) {
+    if (mime === 'image/webp' && nativeWebp === false) return encodeWebpWasm(canvas, quality);
+    const bytes = await canvasEncode(canvas, mime, quality);
+    if (bytes) {
+      if (mime === 'image/webp') nativeWebp = true;
+      return bytes;
+    }
+    if (mime === 'image/webp') {
+      nativeWebp = false;
+      return encodeWebpWasm(canvas, quality);
+    }
+    throw new Error(`Bu tarayıcı ${mime} üretemiyor.`);
+  },
+  get webpEncoder() {
+    return nativeWebp === false ? 'wasm' : 'tarayıcı';
   },
   fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
 };

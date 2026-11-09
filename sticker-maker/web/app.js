@@ -191,7 +191,7 @@ function renderPreview() {
       const { bytes, quality } = await encodeWebpUnder(browserEnv, result.canvas, WHATSAPP.stickerMaxBytes);
       if (seq !== state.previewSeq) return;
       webpLine.className = '';
-      webpLine.textContent = `WhatsApp WebP: ${kb(bytes.length)} ≤ 100 KB (kalite ${quality})`;
+      webpLine.textContent = `WhatsApp WebP: ${kb(bytes.length)} ≤ 100 KB (kalite ${quality}, kodlayıcı: ${browserEnv.webpEncoder})`;
     } catch (e) {
       if (seq !== state.previewSeq) return;
       webpLine.className = 'bad';
