@@ -9,3 +9,4 @@ export * from './spectral';
 export * from './ofdm';
 export * from './expr';
 export * from './trigProjection';
+export * from './convolution';
