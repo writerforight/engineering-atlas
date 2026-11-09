@@ -33,8 +33,6 @@ Click to jump straight in:
 - **Your own coordinate system + a scalar field**: [interactive: pick 1, 2 or 3 dimensions, type x = f₁(a,b,…), then T; shaded 3D surface / point cloud / SVD projection](https://writerforight.github.io/engineering-atlas/#/topic/coordinate-field?section=etkilesim) · [derivation](https://writerforight.github.io/engineering-atlas/#/topic/coordinate-field?section=turetme)
 - **Laplace of an integral, F(s)/s**: [interactive](https://writerforight.github.io/engineering-atlas/#/topic/laplace-integration?section=etkilesim) · [derivation](https://writerforight.github.io/engineering-atlas/#/topic/laplace-integration?section=turetme)
 
-Tool: [**Çıkartma Atölyesi / sticker maker**](https://writerforight.github.io/sticker-maker/) now lives in its own repo, [writerforight/sticker-maker](https://github.com/writerforight/sticker-maker) (moved with its history on 2026-11-09). The old address `/engineering-atlas/sticker-maker/` forwards there.
-
 Standalone page (not part of the site build): [`convolution-story/`](convolution-story/README.md), the convolution story as a single offline `index.html` (double-click to open, no network, no storage).
 
 Deep links: `#/topic/<slug>?tab=<tab>&section=<sezgi|etkilesim|turetme|yorum>`. The tab in the URL
