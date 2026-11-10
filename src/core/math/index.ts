@@ -11,3 +11,4 @@ export * from './expr';
 export * from './trigProjection';
 export * from './convolution';
 export * from './interpolation';
+export * from './thermocouple';

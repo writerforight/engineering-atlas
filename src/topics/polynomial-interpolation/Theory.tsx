@@ -35,6 +35,9 @@ export function Derivation() {
       <Step title="Lebesgue sabiti" why="İnterpolasyon doğrusal bir operatördür, P f = Σ f_j ℓ_j. Sup-normdaki büyüklüğü Λ_n’dir. Veride δ kadar hata varsa (ölçüm, yuvarlama), polinomda en fazla Λ_n·δ kadar hata olur.">
         <Tex block tex="\Lambda_n=\max_{x\in[-1,1]}\sum_j|\ell_j(x)|,\qquad \|P f-P\tilde f\|_\infty\le\Lambda_n\,\|f-\tilde f\|_\infty" />
       </Step>
+      <Step title="Veri hatası: kalibratör değerleri" why="Kalibratör sıcaklığı 0,01 °C'ye yuvarlar, yani her düğüm değeri en fazla δ = 0,005 °C yanlış. Aynı düğümlerle bir kez yanlış, bir kez doğru değerlerle interpole edip fark alınır; ağırlıklar Σ|ℓ_j| ile toplandığı için sınır Λ_n·δ olur. Toplam hata üçgen eşitsizliğinden iki parçaya ayrılır.">
+        <Tex block tex="e_{\text{daten}}=\max_E\big|p[T_{\text{kal}}]-p[T_{\text{exakt}}]\big|\le\Lambda_n\,\delta,\qquad \max_E|p[T_{\text{kal}}]-T_{\text{exakt}}|\le e_{\text{interp}}+e_{\text{daten}}" />
+      </Step>
       <Step title="En büyük sapmayla ilişkisi" why="p* en iyi yaklaşan polinom olsun (aynı derece). P p* = p* olduğundan f − Pf = (f − p*) − P(f − p*). Bu sınır max sapma içindir; RMS için değil.">
         <Tex block tex="\|f-p\|_\infty\le(1+\Lambda_n)\,\min_{\deg q<n}\|f-q\|_\infty,\qquad \Lambda_n^{\text{Ç}}\approx\tfrac2\pi\ln n,\quad \Lambda_n^{\text{eş}}\sim\frac{2^{d+1}}{e\,d\ln d}\;(d=n-1)" />
       </Step>
@@ -53,6 +56,14 @@ export function Notes() {
         <b>Büyük n’de eşit aralıklı eğri.</b> Düzgün fonksiyonlarda bile (eˣ, sin 4x) hata bir süre azalır, sonra
         yeniden büyür: veri tam olsa da yuvarlama hatası (<Tex tex="\approx10^{-16}" />) <Tex tex="\Lambda_n" /> ile
         büyütülür. Çebişev düğümlerinde <Tex tex="\Lambda_n" /> küçük kaldığı için hata makine hassasiyetinde durur.
+      </p>
+      <p>
+        <b>T_exakt ve T_kalibrator.</b> Typ‑K termokupl, 0–500 °C: gerilim E (mV) → sıcaklık T, NIST ITS‑90 eğrisinden.
+        T_exakt seçiliyken sadece interpolasyon hatası görünür; Çebişev’de üstel düşer, eşit aralıklıda yavaş ve dalgalı.
+        T_kalibrator seçiliyken düğüm değerleri yuvarlıdır: küçük n’de interpolasyon hatası, büyük n’de veri hatası baskındır.
+        Eşit aralıklıda <Tex tex="\Lambda_n\delta" /> üstel büyüdüğü için hata hiçbir n’de 0,1 °C’nin altına inmez;
+        Çebişev’de <Tex tex="\Lambda_n" /> küçük kaldığından hata ≈ 0,005 °C tabanında durur. Daha büyük n bunu düzeltmez,
+        sadece daha hassas veri düzeltir.
       </p>
       <p>
         <b>|x| ve tanh 5x.</b> Türevi süreksiz ya da dik fonksiyonlarda Çebişev hatası da yavaş azalır: hız, fonksiyonun

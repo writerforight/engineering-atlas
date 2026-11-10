@@ -93,13 +93,19 @@ export interface InterpResult {
   argmax: number;
 }
 
-/** Interpolate f at n nodes and evaluate the polynomial on the test grid. */
-export function interpolate(f: (t: number) => number, kind: NodeKind, n: number, grid: readonly number[], a = -1, b = 1): InterpResult {
+/**
+ * Interpolate the data f at n nodes and evaluate the polynomial on the test grid.
+ * Errors are measured against `ref` (default f); pass the exact function when f is perturbed data.
+ */
+export function interpolate(
+  f: (t: number) => number, kind: NodeKind, n: number, grid: readonly number[], a = -1, b = 1,
+  ref: (t: number) => number = f,
+): InterpResult {
   const x = nodes(kind, n, a, b);
   const fx = x.map(f);
   const w = nodeWeights(kind, n);
   const p = grid.map((t) => baryEval(x, fx, w, t));
-  const { rms, max, argmax } = errors(p, grid.map(f));
+  const { rms, max, argmax } = errors(p, grid.map(ref));
   return { x, fx, w, p, rms, max, argmax };
 }
 
@@ -113,14 +119,32 @@ export function errors(p: readonly number[], exact: readonly number[]) {
   return { rms: Math.sqrt(s / p.length), max, argmax };
 }
 
-export interface ErrorCurvePoint { n: number; rms: number; max: number; lebesgue: number }
+export interface ErrorCurvePoint {
+  n: number; rms: number; max: number; lebesgue: number;
+  /** data error max|P f − P ref| on the grid (0 when f = ref) */
+  data: number;
+}
 
-/** e_interp(n) for n = nMin..nMax: RMS and max error on the grid, plus Λ_n. */
-export function errorCurve(f: (t: number) => number, kind: NodeKind, grid: readonly number[], nMin = 2, nMax = 40, a = -1, b = 1): ErrorCurvePoint[] {
+/** Data error e_daten = max_grid |P f − P ref|: same nodes, perturbed vs exact values. */
+export function dataError(r: InterpResult, ref: (t: number) => number, grid: readonly number[]): number {
+  const fr = r.x.map(ref);
+  let m = 0;
+  grid.forEach((t, i) => { m = Math.max(m, Math.abs(r.p[i]! - baryEval(r.x, fr, r.w, t))); });
+  return m;
+}
+
+/** e(n) for n = nMin..nMax: RMS and max error against ref, Λ_n and the data error. */
+export function errorCurve(
+  f: (t: number) => number, kind: NodeKind, grid: readonly number[], nMin = 2, nMax = 40, a = -1, b = 1,
+  ref: (t: number) => number = f,
+): ErrorCurvePoint[] {
   const out: ErrorCurvePoint[] = [];
   for (let n = nMin; n <= nMax; n++) {
-    const r = interpolate(f, kind, n, grid, a, b);
-    out.push({ n, rms: r.rms, max: r.max, lebesgue: lebesgueConst(r.x, r.w, a, b, 1000) });
+    const r = interpolate(f, kind, n, grid, a, b, ref);
+    out.push({
+      n, rms: r.rms, max: r.max, lebesgue: lebesgueConst(r.x, r.w, a, b, 1000),
+      data: ref === f ? 0 : dataError(r, ref, grid),
+    });
   }
   return out;
 }
