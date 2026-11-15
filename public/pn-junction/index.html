@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src data:">
+<meta name="referrer" content="no-referrer">
+<title>p-n eklemi: tükenim bölgesi kendiliğinden oluşuyor</title>
+<style>
+  /* Same tokens as the Engineering Atlas site (src/index.css). */
+  :root {
+    --bg: #f7f7f4; --bg-elev: #ffffff; --bg-sunk: #efefea; --fg: #1b1d22; --muted: #5f636d;
+    --border: #dcdcd4; --grid: #e6e6df; --axis: #9a9ca3;
+    --elec: #1c63d6; --hole: #d6332b; --don: rgba(214, 51, 43, 0.38); --acc: rgba(28, 99, 214, 0.38);
+    --pside: rgba(214, 51, 43, 0.06); --nside: rgba(28, 99, 214, 0.06);
+    --theory: #2b8a3e; --pb: #ae3ec9; --meas: #e8590c; --ok: #2b8a3e; --bad: #c92a2a;
+    --warn-bg: #fff4e6; --warn-fg: #8a3b00; --info-bg: #edf2ff; --info-fg: #23387f;
+    --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  :root[data-theme='dark'] {
+    --bg: #111317; --bg-elev: #1a1d23; --bg-sunk: #0c0e11; --fg: #e7e8ea; --muted: #9aa0aa;
+    --border: #2c3038; --grid: #23272e; --axis: #5d636d;
+    --elec: #6ea8ff; --hole: #ff7b72; --don: rgba(255, 123, 114, 0.35); --acc: rgba(110, 168, 255, 0.35);
+    --pside: rgba(255, 123, 114, 0.07); --nside: rgba(110, 168, 255, 0.07);
+    --theory: #69db7c; --pb: #e599f7; --meas: #ff9a4d; --ok: #69db7c; --bad: #ff8787;
+    --warn-bg: #3a2410; --warn-fg: #ffc58f; --info-bg: #1b2340; --info-fg: #b8c6ff;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  body { font: 15px/1.5 var(--font); }
+  main { max-width: 1100px; margin: 0 auto; padding: 14px 16px 28px; }
+  body.embedded main { padding-top: 4px; }
+  body.embedded .standalone-only { display: none; }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 12px; }
+  .card { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+  .stage { position: relative; }
+  canvas { display: block; width: 100%; }
+  #box { border-radius: 8px; border: 1px solid var(--border); touch-action: none; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  .legend i.sq { border-radius: 2px; }
+  .legend i.ln { width: 18px; height: 0; border-radius: 0; border-top: 2px dashed; vertical-align: 3px; }
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 22px; }
+  .ctl label { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 8px; font-size: 13px; color: var(--muted); }
+  .ctl label b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ctl input[type=range] { width: 100%; accent-color: var(--elec); }
+  .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+  button { font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg-sunk); color: var(--fg); cursor: pointer; }
+  button:hover { border-color: var(--axis); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button[aria-pressed=true], button.primary { background: var(--elec); border-color: var(--elec); color: #fff; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--meas); outline-offset: 2px; }
+  .perf { margin-left: auto; font: 12px var(--mono); color: var(--muted); }
+  .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+  .plot h3 { font-size: 13px; margin: 0 0 4px; color: var(--muted); font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+  th:first-child, td:first-child { text-align: left; }
+  td.ok { color: var(--ok); font-weight: 600; }
+  td.bad { color: var(--bad); font-weight: 600; }
+  td.wait { color: var(--muted); }
+  .tablewrap { overflow-x: auto; }
+  .note { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+  .callout { border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-top: 8px; }
+  .callout.warn { background: var(--warn-bg); color: var(--warn-fg); }
+  .callout.info { background: var(--info-bg); color: var(--info-fg); }
+  .status { font-weight: 600; }
+  .prose p { margin: 0 0 8px; max-width: 75ch; }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="standalone-only">
+    <h1>p-n eklemi: tükenim bölgesi kendiliğinden oluşuyor</h1>
+    <p class="sub">Elektronlar, delikler ve sabit iyonlar parçacık olarak; Coulomb kuvveti, ısıl gürültü (Langevin), rekombinasyon ve üretim. Bölge önceden çizilmez, fizikten doğar; sonuç formüllerle canlı karşılaştırılır.</p>
+  </header>
+
+  <section class="card">
+    <div class="stage"><canvas id="box" aria-label="p-n eklemindeki parçacıklar: solda p tarafı, sağda n tarafı"></canvas></div>
+    <div class="legend" aria-hidden="true">
+      <span><i style="background:var(--elec)"></i>elektron (−, hareketli)</span>
+      <span><i style="background:var(--hole)"></i>delik (+, hareketli)</span>
+      <span><i class="sq" style="background:var(--don)"></i>donör iyonu N<sub>D</sub><sup>+</sup> (sabit)</span>
+      <span><i class="sq" style="background:var(--acc)"></i>akseptör iyonu N<sub>A</sub><sup>−</sup> (sabit)</span>
+      <span><i class="ln" style="border-color:var(--theory)"></i>−x<sub>p</sub>, x<sub>n</sub> (formül)</span>
+      <span><i class="ln" style="border-color:var(--meas);border-top-style:solid"></i>ölçülen sınır</span>
+    </div>
+    <p class="note"><span class="status" id="status">—</span></p>
+  </section>
+
+  <section class="card" aria-labelledby="h-ctl">
+    <h2 id="h-ctl">Ayarlar</h2>
+    <div class="controls">
+      <div class="ctl"><label for="nd"><span>Donör yoğunluğu N<sub>D</sub></span> <b id="nd-out"></b></label><input id="nd" type="range" min="10" max="60" step="5" value="30"></div>
+      <div class="ctl"><label for="na"><span>Akseptör yoğunluğu N<sub>A</sub></span> <b id="na-out"></b></label><input id="na" type="range" min="10" max="60" step="5" value="30"></div>
+      <div class="ctl"><label for="temp"><span>Sıcaklık T</span> <b id="temp-out"></b></label><input id="temp" type="range" min="285" max="325" step="5" value="300"></div>
+      <div class="ctl"><label for="volt"><span>Dış gerilim V</span> <b id="volt-out"></b></label><input id="volt" type="range" min="-8" max="3" step="0.5" value="0"></div>
+    </div>
+    <div class="buttons">
+      <button id="play" aria-pressed="false">Duraklat</button>
+      <button id="reset">Sıfırla</button>
+      <button id="contact" class="primary">Temas ettir</button>
+      <button id="slow" aria-pressed="false">Ağır çekim</button>
+      <span class="perf" id="perf"></span>
+    </div>
+    <p class="note">V &gt; 0: ileri kutuplama (p tarafı +), V &lt; 0: ters kutuplama. Dotlama değişince parçacıklar yeniden yerleştirilir ve iki taraf yeniden temas ettirilir.</p>
+  </section>
+
+  <section class="card" aria-labelledby="h-cmp">
+    <h2 id="h-cmp">Simülasyon ve formül</h2>
+    <div class="tablewrap"><table id="cmp"></table></div>
+    <div id="callouts"></div>
+    <p class="note">Ölçümler y boyunca ve zaman içinde ortalanmış profillerden: W = Q/N<sub>D</sub> + Q/N<sub>A</sub>, Q = ε·|E|<sub>max</sub> (Gauss), V<sub>bi</sub> iki gövde bölgesi arasındaki potansiyel farkı. "PB" = aynı istatistiğin parçacıksız tam çözümü (1B Poisson–Boltzmann).</p>
+  </section>
+
+  <section class="card">
+    <div class="grid2">
+      <div class="plot"><h3>Yük yoğunluğu ρ(x) [q·n<sub>i</sub>]</h3><canvas id="p-rho"></canvas></div>
+      <div class="plot"><h3>Elektrik alanı E(x) [V<sub>T</sub>/L<sub>0</sub>]</h3><canvas id="p-e"></canvas></div>
+      <div class="plot"><h3>Potansiyel φ(x) [V<sub>T</sub>]</h3><canvas id="p-phi"></canvas></div>
+      <div class="plot"><h3>Taşıyıcı yoğunlukları n(x), p(x) [n<sub>i</sub>], logaritmik</h3><canvas id="p-np"></canvas></div>
+    </div>
+    <div class="legend" aria-hidden="true">
+      <span><i class="ln" style="border-color:var(--fg);border-top-style:solid"></i>simülasyon (y ve zaman ortalaması)</span>
+      <span><i class="ln" style="border-color:var(--theory)"></i>tükenim yaklaşımı (formül)</span>
+      <span><i class="ln" style="border-color:var(--pb);border-top-style:dotted"></i>Poisson–Boltzmann (tam)</span>
+      <span><i class="ln" style="border-color:var(--elec);border-top-style:solid"></i>n</span>
+      <span><i class="ln" style="border-color:var(--hole);border-top-style:solid"></i>p</span>
+    </div>
+  </section>
+
+  <section class="card prose standalone-only" aria-labelledby="h-why">
+    <h2 id="h-why">Tükenim bölgesi nasıl oluşur?</h2>
+    <p><b>Difüzyon.</b> Temastan önce iki taraf da nötrdür: n tarafında her donör iyonunun yanında bir elektron, p tarafında her akseptörün yanında bir delik vardır. Temas anında elektronlar ısıl hareketle (Langevin gürültüsü) elektronun az olduğu p tarafına, delikler n tarafına yayılır ve orada rekombinasyonla yok olur.</p>
+    <p><b>Sabit iyonlar.</b> Giden taşıyıcı iyonunu yanında götüremez. Kavşağın n tarafında örtülmemiş pozitif donörler, p tarafında negatif akseptörler kalır: bu ince tabaka tükenim (uzay yükü) bölgesidir.</p>
+    <p><b>Karşı alan.</b> Bu yükler n'den p'ye bakan bir alan kurar; alan elektronları n'ye, delikleri p'ye geri iter. Geri itme (sürüklenme) difüzyonu tam dengelediğinde bölge büyümeyi bırakır. Bu denge Boltzmann dağılımıdır: n<sub>n</sub>/n<sub>p</sub> = e<sup>V<sub>bi</sub>/V<sub>T</sub></sup>. Azınlık yoğunluklarını üretim–rekombinasyon belirler (n·p = n<sub>i</sub><sup>2</sup>); buradan V<sub>bi</sub> = V<sub>T</sub>·ln(N<sub>A</sub>N<sub>D</sub>/n<sub>i</sub><sup>2</sup>) çıkar. Benzetimde n<sub>i</sub> yalnız üretim hızında görünür; V<sub>bi</sub> sınırdan dayatılmaz.</p>
+    <p><b>Dış gerilim.</b> Ters kutuplama engeli V<sub>bi</sub> − V kadar yükseltir: daha fazla iyon örtüsüz kalmalı, W büyür. İleri kutuplama engeli düşürür, W küçülür ve kavşaktan akım geçer.</p>
+  </section>
+
+  <p class="note standalone-only">Engineering Atlas · tek klasör, sunucu ve derleme gerekmez (index.html, sim.js, view.js). Fizik çekirdeği <code>sim.js</code> tarayıcıdan bağımsızdır ve Node ile denetlenebilir.</p>
+</main>
+<script src="sim.js"></script>
+<script src="view.js"></script>
+</body>
+</html>
