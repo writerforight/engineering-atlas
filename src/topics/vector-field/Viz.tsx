@@ -398,6 +398,55 @@ export default function Viz() {
         ))}
       </div>
 
+      {scene && (
+        <div className="panel" aria-live="off">
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}>
+            <Tile
+              color="var(--fg)"
+              title={<>P noktası</>}
+              value={<Tex tex={`(${q.map((v) => fmt(v, 2)).join(',\\,')})`} />}
+              sub={<Tex tex={`\\mathbf F(P)=${scene.FP.map((c, i) => `(${num(c, 2)})${sys.unitTex[i]}`).join('+')}`} />}
+            />
+            <Tile
+              color="var(--c1)"
+              title={<>Diverjans <Tex tex="\nabla\cdot\mathbf F\,(P)" /></>}
+              value={<Tex tex={num(scene.div)} />}
+              sub={<>P’ye bağlı, R’den bağımsız</>}
+            />
+            <Tile
+              color="var(--c3)"
+              title={<>Rotasyon <Tex tex={is3 ? '(\\nabla\\times\\mathbf F)\\cdot\\mathbf n\\,(P)' : '(\\nabla\\times\\mathbf F)_z\\,(P)'} /></>}
+              value={<Tex tex={num(is3 ? rotN : scene.rot[2])} />}
+              sub={is3 ? <Tex tex={`\\nabla\\times\\mathbf F=(${scene.rot.map((c) => num(c, 2)).join(',\\,')})_{xyz}`} /> : <>P’ye bağlı, R’den bağımsız</>}
+            />
+            <Tile
+              color="var(--c1)"
+              title={<>Akı <Tex tex={is3 ? '\\Phi_R=\\oiint\\mathbf F\\cdot\\mathbf n\\,dA' : '\\Phi_R=\\oint\\mathbf F\\cdot\\mathbf n\\,ds'} /></>}
+              value={<Tex tex={num(scene.flux.total)} />}
+              sub={<Tex tex={is3 ? `\\Phi_R/(\\tfrac43\\pi R^3)=${num(scene.flux.total / vol)}` : `\\Phi_R/(\\pi R^2)=${num(scene.flux.total / area)}`} />}
+            />
+            <Tile
+              color="var(--c3)"
+              title={<>Sirkülasyon <Tex tex="\Gamma_R=\oint\mathbf F\cdot d\mathbf l" /></>}
+              value={<Tex tex={num(scene.circ.total)} />}
+              sub={<Tex tex={`\\Gamma_R/(\\pi R^2)=${num(scene.circ.total / area)}`} />}
+            />
+          </div>
+          <p className="canvas-caption" style={{ marginBottom: 0 }}>
+            Bu beş kutu canlıdır: P’yi {is3 ? 'kaydırıcılarla' : 'sürükleyerek ya da kaydırıcılarla'} taşıdığında, R’yi ya da formülü
+            değiştirdiğinde anında yeniden hesaplanır. R küçüldükçe <Tex tex={is3 ? '\\Phi_R/V' : '\\Phi_R/A'} /> diverjansa,{' '}
+            <Tex tex="\Gamma_R/A" /> {is3 ? 'rotasyonun n bileşenine' : 'rotasyona'} yaklaşır; fark kalıyorsa çemberin/kürenin içinde alanın
+            tanımsız olduğu bir nokta (kaynak ya da girdap çizgisi) vardır.
+            {sweep < 1 && (
+              <>
+                {' '}Tarama τ = {fmt(sweep, 2)}: şu ana kadar <Tex tex={`\\Phi(\\tau)=${num(partial(scene.flux, sweep))}`} />,{' '}
+                <Tex tex={`\\Gamma(\\tau)=${num(partial(scene.circ, sweep))}`} />.
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
       <div className="viz-grid">
         <div className="panel">
           <Canvas
@@ -479,35 +528,7 @@ export default function Viz() {
             </div>
           )}
 
-          <h3 style={{ margin: '8px 0 0', fontSize: 15 }}>3. Sonuçlar</h3>
-          {scene && (
-            <div className="readout" style={{ fontSize: 14 }}>
-              <Tex block tex={`\\mathbf F(P)=${scene.FP.map((c, i) => `(${num(c)})\\,${sys.unitTex[i]}`).join('+')}`} />
-              <Tex block tex={`\\nabla\\cdot\\mathbf F\\,(P)=${num(scene.div)}`} />
-              {is3 ? (
-                <Tex block tex={`\\nabla\\times\\mathbf F\\,(P)=\\begin{pmatrix}${scene.rot.map((c) => num(c)).join('\\\\')}\\end{pmatrix}_{xyz},\\quad(\\nabla\\times\\mathbf F)\\cdot\\mathbf n=${num(rotN)}`} />
-              ) : (
-                <Tex block tex={`(\\nabla\\times\\mathbf F)_z\\,(P)=${num(scene.rot[2])}`} />
-              )}
-              <Tex
-                block
-                tex={is3
-                  ? `\\Phi_R=\\oiint\\mathbf F\\cdot\\mathbf n\\,dA=${num(scene.flux.total)},\\quad\\frac{\\Phi_R}{\\tfrac43\\pi R^3}=${num(scene.flux.total / vol)}`
-                  : `\\Phi_R=\\oint\\mathbf F\\cdot\\mathbf n\\,ds=${num(scene.flux.total)},\\quad\\frac{\\Phi_R}{\\pi R^2}=${num(scene.flux.total / area)}`}
-              />
-              <Tex block tex={`\\Gamma_R=\\oint\\mathbf F\\cdot d\\mathbf l=${num(scene.circ.total)},\\quad\\frac{\\Gamma_R}{\\pi R^2}=${num(scene.circ.total / area)}`} />
-              {sweep < 1 && (
-                <Tex block tex={`\\tau=${fmt(sweep, 2)}:\\quad\\Phi(\\tau)=${num(partial(scene.flux, sweep))},\\quad\\Gamma(\\tau)=${num(partial(scene.circ, sweep))}`} />
-              )}
-              <p style={{ margin: '4px 0 0' }}>
-                R küçüldükçe <Tex tex={is3 ? '\\Phi_R/V' : '\\Phi_R/A'} /> diverjansa, <Tex tex="\Gamma_R/A" />{' '}
-                {is3 ? <>rotasyonun n bileşenine</> : <>rotasyona</>} yaklaşır. Aradaki fark kalıyorsa çemberin/kürenin içinde alanın
-                tanımsız olduğu bir nokta (kaynak ya da girdap çizgisi) vardır.
-              </p>
-            </div>
-          )}
-
-          <h3 style={{ margin: '8px 0 0', fontSize: 15 }}>4. Görünüm</h3>
+          <h3 style={{ margin: '8px 0 0', fontSize: 15 }}>3. Görünüm</h3>
           {is3 ? (
             <Slider label="Eksen başına ok" value={density3} min={3} max={8} step={1} onChange={setDensity3} format={(v) => `${v} (${v ** 3} ok)`} />
           ) : (
@@ -529,6 +550,16 @@ const inputStyle = {
   background: 'var(--bg-elev)',
   color: 'var(--fg)',
 } as const;
+
+function Tile({ title, value, sub, color }: { title: ReactNode; value: ReactNode; sub: ReactNode; color: string }) {
+  return (
+    <div className="readout" style={{ borderLeft: `4px solid ${color}`, display: 'grid', gap: 2, padding: '6px 10px' }}>
+      <span style={{ fontSize: 13, color: 'var(--muted)' }}>{title}</span>
+      <span style={{ fontSize: 24, fontWeight: 600, lineHeight: 1.2 }}>{value}</span>
+      <span style={{ fontSize: 13 }}>{sub}</span>
+    </div>
+  );
+}
 
 function Field(props: { label: ReactNode; value: string; onChange: (v: string) => void; error: string }) {
   return (
