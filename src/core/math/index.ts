@@ -13,3 +13,4 @@ export * from './convolution';
 export * from './interpolation';
 export * from './thermocouple';
 export * from './vectorField';
+export * from './linearId';
