@@ -53,6 +53,14 @@ describe('identifyLinear', () => {
     xh.forEach((v, i) => expect(v).toBeCloseTo(x[i]!, 8));
   });
 
+  it('the direct route X Y⁺ equals Â⁺ without noise when m ≥ n and K ≥ n', () => {
+    const A = randnMat(4, 3, 51);
+    const X = randnMat(3, 6, 52);
+    const Y = mul(A, X);
+    const { Ahat } = identifyLinear(X, Y);
+    expect(maxAbsDiff(mul(X, pinv(Y).P), pinv(Ahat).P)).toBeLessThan(1e-7);
+  });
+
   it('with m < n, Â⁺ y only returns the row-space part of x', () => {
     const A = randnMat(2, 3, 31);
     const X = randnMat(3, 5, 32);

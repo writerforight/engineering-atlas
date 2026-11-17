@@ -37,6 +37,13 @@ export default function Viz() {
   const fX = useMemo(() => fullSvd(X), [X]);
   const Xplus = useMemo(() => mul(mul(fX.V, fX.Splus), transpose(fX.U)), [fX]);
   const fA = useMemo(() => fullSvd(Ahat), [Ahat]);
+  // direct route: decompose Y and learn the inverse map B̂ = X Y⁺
+  const fY = useMemo(() => fullSvd(Y), [Y]);
+  const Yplus = useMemo(() => mul(mul(fY.V, fY.Splus), transpose(fY.U)), [fY]);
+  const Bhat = useMemo(() => mul(X, Yplus), [X, Yplus]);
+  const xB = useMemo(() => mulVec(Bhat, yTest), [Bhat, yTest]);
+  const errB = vecNorm(sub([xB], [xTest])[0]!) / (vecNorm(xTest) || 1);
+  const diffBA = maxAbsDiff(Bhat, inv.P);
 
   const errA = maxAbsDiff(Ahat, A);
   const errX = vecNorm(sub([xHat], [xTest])[0]!) / (vecNorm(xTest) || 1);
@@ -44,19 +51,20 @@ export default function Viz() {
   const rankA = inv.svd.rank;
 
   const drawBars = useCallback(({ ctx, width, height, palette: pal }: DrawContext) => {
-    const mx = Math.max(0.5, ...xTest.map(Math.abs), ...xHat.map(Math.abs)) * 1.15;
+    const mx = Math.max(0.5, ...xTest.map(Math.abs), ...xHat.map(Math.abs), ...xB.map(Math.abs)) * 1.15;
     const vp = makeViewport(width, height, { x: [-0.6, n - 0.4], y: [-mx, mx] }, PAD);
     drawGridAxes(ctx, vp, pal, { xLabel: 'bileşen i', ticks: Math.min(n, 8) });
-    const bw = (vp.x(1) - vp.x(0)) * 0.3;
+    const bw = (vp.x(1) - vp.x(0)) * 0.25;
     const bar = (i: number, slot: number, v: number, color: string) => {
       ctx.fillStyle = color;
-      ctx.fillRect(vp.x(i) + (slot - 1) * bw, Math.min(vp.y(0), vp.y(v)), bw - 2, Math.abs(vp.y(v) - vp.y(0)));
+      ctx.fillRect(vp.x(i) + (slot - 1.5) * bw, Math.min(vp.y(0), vp.y(v)), bw - 2, Math.abs(vp.y(v) - vp.y(0)));
     };
     for (let i = 0; i < n; i++) {
       bar(i, 0, xTest[i]!, pal.c1);
       bar(i, 1, xHat[i]!, pal.c2);
+      bar(i, 2, xB[i]!, pal.c3);
     }
-  }, [xTest, xHat, n]);
+  }, [xTest, xHat, xB, n]);
 
   return (
     <div className="controls">
@@ -127,11 +135,6 @@ export default function Viz() {
           <Labeled label="\mathbf y=A\mathbf x"><Heat M={yTest.map((v) => [v])} /></Labeled>
           <Labeled label="\mathbf x\;\text{(gerçek)}"><Heat M={xTest.map((v) => [v])} /></Labeled>
         </div>
-        <Canvas draw={drawBars} aspect={0.4} ariaLabel="Gerçek girdi x ve tahmin x̂, bileşen bileşen çubuklar" />
-        <div className="legend">
-          <span><i style={{ background: 'var(--c1)' }} />gerçek x</span>
-          <span><i style={{ background: 'var(--c2)' }} />tahmin x̂ = Â⁺ y</span>
-        </div>
         <div className="readout" style={{ fontSize: 14 }}>
           <Tex tex={`\\frac{\\|\\hat{\\mathbf x}-\\mathbf x\\|}{\\|\\mathbf x\\|} = ${fmt(errX, 4)}`} />
         </div>
@@ -148,6 +151,45 @@ export default function Viz() {
             Gürültü en küçük tekil değerle bölünerek büyür: kabaca <Tex tex={`\\sigma_\\varepsilon/\\sigma_{\\min}(\\hat A) = ${fmt(noise / inv.svd.s[rankA - 1]!, 3)}`} />.
           </p>
         )}
+      </div>
+
+      <div className="panel controls">
+        <h3 style={{ margin: 0, fontSize: 14 }}>4 · Doğrudan yol: Y’yi ayrıştır, tersi tek adımda öğren <Tex tex="\hat B = X\,Y^{+},\quad \hat{\mathbf x}_B=\hat B\,\mathbf y" /></h3>
+        <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+          Bu kez çıktılar girdi, girdiler hedef gibi düşünülür: <Tex tex="X \approx B\,Y" />. A’yı hiç kurmadan, çıktıdan girdiye giden haritayı Y’nin SVD’siyle buluruz.
+          Y’nin tekil değerleri (= <Tex tex="YY^{\mathsf T}" /> özdeğerlerinin karekökü): {fY.s.map((v) => fmt(v, 3)).join(', ')} · rank Y = {fY.rank}.
+        </p>
+        <SvdBlock name="Y" M={Y} f={fY} rows={m} cols={K} plus={Yplus} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
+          <Labeled label={`\\hat B\\;(${n}\\times${m})`}><Heat M={Bhat} /></Labeled>
+          <Tex tex="=" />
+          <Labeled label={`X\\;(${n}\\times${K})`}><Heat M={X} /></Labeled>
+          <Tex tex="\cdot" />
+          <Labeled label={`Y^{+}\\;(${K}\\times${m})`}><Heat M={Yplus} /></Labeled>
+          <Tex tex="\quad\text{adım 3:}" />
+          <Labeled label="\hat A^{+}"><Heat M={inv.P} /></Labeled>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
+          <Labeled label="\hat{\mathbf x}_B"><Heat M={xB.map((v) => [v])} /></Labeled>
+          <Tex tex="=" />
+          <Labeled label="\hat B"><Heat M={Bhat} /></Labeled>
+          <Tex tex="\cdot" />
+          <Labeled label="\mathbf y"><Heat M={yTest.map((v) => [v])} /></Labeled>
+        </div>
+        <div className="readout" style={{ fontSize: 14 }}>
+          <Tex tex={`\\max|\\hat B-\\hat A^{+}| = ${fmt(diffBA, 4)},\\qquad \\frac{\\|\\hat{\\mathbf x}_B-\\mathbf x\\|}{\\|\\mathbf x\\|} = ${fmt(errB, 4)}`} />
+        </div>
+        <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+          {diffBA < 1e-6
+            ? 'İki yol aynı matrisi verdi: gürültü yok, m ≥ n ve deneyler yeterli olunca X Y⁺ = X X⁺ A⁺ = A⁺.'
+            : 'İki yol farklı: gürültü varken B̂ girdideki hatayı, Â ise çıktıdaki hatayı küçültür; m < n ya da K < n iken de farklı varsayımlarla eksik bilgiyi doldururlar.'}
+        </p>
+        <Canvas draw={drawBars} aspect={0.4} ariaLabel="Gerçek girdi x ve iki yoldan gelen tahminler, bileşen bileşen çubuklar" />
+        <div className="legend">
+          <span><i style={{ background: 'var(--c1)' }} />gerçek x</span>
+          <span><i style={{ background: 'var(--c2)' }} />x̂ = Â⁺ y (X’in SVD’si, adım 2–3)</span>
+          <span><i style={{ background: 'var(--c3)' }} />x̂_B = X Y⁺ y (Y’nin SVD’si)</span>
+        </div>
       </div>
     </div>
   );

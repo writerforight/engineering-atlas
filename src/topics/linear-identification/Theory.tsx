@@ -58,7 +58,7 @@ export function Notes() {
         tersi”, yani sözde ters. Kare ve tam ranklı durumda bu sıradan tersle aynıdır.
       </p>
       <p>
-        <b>Doğrudan ters harita.</b> Aynı deneylerden tersi doğrudan da öğrenilebilir: <Tex tex="\hat B = X Y^{+}" />.
+        <b>Doğrudan ters harita (adım 4).</b> Y’nin SVD’sini alıp tersi doğrudan da öğrenebiliriz: <Tex tex="\hat B = X Y^{+}" />.
         Gürültüsüz ve <Tex tex="m \ge n" /> iken <Tex tex="\hat B=\hat A^{+}" /> olur; gürültüde ikisi farklı hatayı
         küçültür.
       </p>
