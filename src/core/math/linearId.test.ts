@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { identifyLinear, pinv, randnMat, svd } from './linearId';
+import { fullSvd, identifyLinear, pinv, randnMat, svd } from './linearId';
 import { maxAbsDiff, mul, mulVec, transpose } from './matrix';
 
 describe('svd / pinv', () => {
@@ -20,6 +20,19 @@ describe('svd / pinv', () => {
     const { P, svd: d } = pinv(A);
     expect(d.rank).toBe(2);
     expect(maxAbsDiff(mul(mul(A, P), A), A)).toBeLessThan(1e-8);
+  });
+});
+
+describe('fullSvd', () => {
+  it('gives orthogonal U, V with U Σ Vᵀ = A and V Σ⁺ Uᵀ = A⁺, also when rank-deficient', () => {
+    for (const A of [randnMat(3, 5, 41), mul(randnMat(4, 1, 42), randnMat(1, 3, 43))]) {
+      const { U, S, V, Splus } = fullSvd(A);
+      const I = (k: number) => Array.from({ length: k }, (_, i) => Array.from({ length: k }, (_, j) => (i === j ? 1 : 0)));
+      expect(maxAbsDiff(mul(transpose(U), U), I(U.length))).toBeLessThan(1e-8);
+      expect(maxAbsDiff(mul(transpose(V), V), I(V.length))).toBeLessThan(1e-8);
+      expect(maxAbsDiff(mul(mul(U, S), transpose(V)), A)).toBeLessThan(1e-8);
+      expect(maxAbsDiff(mul(mul(V, Splus), transpose(U)), pinv(A).P)).toBeLessThan(1e-8);
+    }
   });
 });
 

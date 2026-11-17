@@ -100,6 +100,34 @@ export function randnMat(rows: number, cols: number, seed: number): Mat {
   return Array.from({ length: rows }, () => Array.from({ length: cols }, g));
 }
 
+/**
+ * Full SVD A = U Σ Vᵀ with square U (m×m), V (n×n) and rectangular Σ (m×n), and Σ⁺ (n×m).
+ * U's columns beyond the rank are completed to an orthonormal basis (Gram–Schmidt).
+ */
+export function fullSvd(A: Mat, rtol = 1e-6): { U: Mat; S: Mat; V: Mat; Splus: Mat; s: number[]; rank: number } {
+  const m = A.length, n = A[0]?.length ?? 0;
+  const d = svd(A, rtol);
+  const cols: Vec[] = Array.from({ length: d.rank }, (_, k) => d.U.map((r) => r[k]!));
+  for (let e = 0; e < m && cols.length < m; e++) {
+    const v: Vec = Array.from({ length: m }, (_, i) => (i === e ? 1 : 0));
+    for (let pass = 0; pass < 2; pass++)
+      for (const c of cols) {
+        const p = c.reduce((s, ci, i) => s + ci * v[i]!, 0);
+        for (let i = 0; i < m; i++) v[i]! -= p * c[i]!;
+      }
+    const nv = vecNorm(v);
+    if (nv > 1e-8) cols.push(v.map((x) => x / nv));
+  }
+  const U: Mat = Array.from({ length: m }, (_, i) => cols.map((c) => c[i]!));
+  const S = zeros(m, n);
+  const Splus = zeros(n, m);
+  d.s.forEach((sv, k) => {
+    S[k]![k] = k < d.rank ? sv : 0;
+    if (k < d.rank) Splus[k]![k] = 1 / sv;
+  });
+  return { U, S, V: d.V, Splus, s: d.s.map((sv, k) => (k < d.rank ? sv : 0)), rank: d.rank };
+}
+
 export function vecNorm(v: Vec): number {
   return Math.sqrt(v.reduce((s, x) => s + x * x, 0));
 }

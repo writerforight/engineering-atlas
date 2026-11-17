@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import {
-  identifyLinear, maxAbsDiff, mul, mulVec, pinv, randnMat, sub, vecNorm, type Mat, type Vec,
+  fullSvd, identifyLinear, maxAbsDiff, mul, mulVec, pinv, randnMat, sub, transpose, vecNorm, type Mat, type Vec,
 } from '../../core/math';
 import { Callout, Canvas, Slider, Tex, drawGridAxes, fmt, makeViewport, type DrawContext } from '../../core/ui';
 
@@ -33,6 +33,10 @@ export default function Viz() {
     return mulVec(A, xTest).map((v, i) => v + noise * e[i]!);
   }, [A, xTest, m, noise, seedT]);
   const xHat = useMemo(() => mulVec(inv.P, yTest), [inv, yTest]);
+  // explicit factors for display
+  const fX = useMemo(() => fullSvd(X), [X]);
+  const Xplus = useMemo(() => mul(mul(fX.V, fX.Splus), transpose(fX.U)), [fX]);
+  const fA = useMemo(() => fullSvd(Ahat), [Ahat]);
 
   const errA = maxAbsDiff(Ahat, A);
   const errX = vecNorm(sub([xHat], [xTest])[0]!) / (vecNorm(xTest) || 1);
@@ -87,9 +91,14 @@ export default function Viz() {
         <p className="muted" style={{ margin: 0, fontSize: 13 }}>
           X’in tekil değerleri (= <Tex tex="XX^{\mathsf T}" /> özdeğerlerinin karekökü): {Xsvd.s.map((s) => fmt(s, 3)).join(', ')} · rank X = {rankX} / n = {n}
         </p>
+        <SvdBlock name="X" M={X} f={fX} rows={n} cols={K} plus={Xplus} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
           <Labeled label={`\\hat A\\;(${m}\\times${n})`}><Heat M={Ahat} /></Labeled>
-          <Tex tex="\approx" />
+          <Tex tex="=" />
+          <Labeled label={`Y\\;(${m}\\times${K})`}><Heat M={Y} /></Labeled>
+          <Tex tex="\cdot" />
+          <Labeled label={`X^{+}\\;(${K}\\times${n})`}><Heat M={Xplus} /></Labeled>
+          <Tex tex="\quad\text{gerçek:}" />
           <Labeled label="A"><Heat M={A} /></Labeled>
         </div>
         <div className="readout" style={{ fontSize: 14 }}>
@@ -109,6 +118,7 @@ export default function Viz() {
           Â’nın tekil değerleri: {inv.svd.s.map((s) => fmt(s, 3)).join(', ')} · rank Â = {rankA}. Â kare değilse tersi yok;
           SVD ile sözde ters <Tex tex="\hat A^{+}" /> ({n}×{m}) alınır.
         </p>
+        <SvdBlock name="\hat A" M={Ahat} f={fA} rows={m} cols={n} plus={inv.P} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
           <Labeled label="\hat{\mathbf x}"><Heat M={xHat.map((v) => [v])} /></Labeled>
           <Tex tex="=" />
@@ -143,6 +153,40 @@ export default function Viz() {
   );
 }
 
+/** M = U Σ Vᵀ and M⁺ = V Σ⁺ Uᵀ, every factor as a numbered table. */
+function SvdBlock({ name, M, f, rows, cols, plus }: {
+  name: string; M: Mat; f: ReturnType<typeof fullSvd>; rows: number; cols: number; plus: Mat;
+}) {
+  const row = { display: 'flex', alignItems: 'center', gap: 10, overflowX: 'auto' as const, paddingBottom: 6 };
+  const zeros = f.s.length - f.rank;
+  return (
+    <div style={{ display: 'grid', gap: 6, borderLeft: '3px solid var(--c3)', paddingLeft: 10 }}>
+      <div style={row}>
+        <Labeled label={`${name}\\;(${rows}\\times${cols})`}><Heat M={M} /></Labeled>
+        <Tex tex="=" />
+        <Labeled label={`U\\;(${rows}\\times${rows})`}><Heat M={f.U} /></Labeled>
+        <Tex tex="\cdot" />
+        <Labeled label={`\\Sigma\\;(${rows}\\times${cols})`}><Heat M={f.S} diag /></Labeled>
+        <Tex tex="\cdot" />
+        <Labeled label={`V^{\\mathsf T}\\;(${cols}\\times${cols})`}><Heat M={transpose(f.V)} /></Labeled>
+      </div>
+      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+        U’nun sütunları çıktı yönleri, V’nin sütunları (Vᵀ’nin satırları) girdi yönleri, Σ’nın köşegeni bu yönler arasındaki büyütme σ₁ ≥ σ₂ ≥ ….
+        Ters çevirirken sıralama döner ve her σ yerine 1/σ yazılır{zeros > 0 ? <>; <b>{zeros} tane σ = 0</b>, bunlar ters çevrilemez, Σ⁺’da 0 kalır</> : ''}.
+      </p>
+      <div style={row}>
+        <Labeled label={`${name}^{+}\\;(${cols}\\times${rows})`}><Heat M={plus} /></Labeled>
+        <Tex tex="=" />
+        <Labeled label={`V\\;(${cols}\\times${cols})`}><Heat M={f.V} /></Labeled>
+        <Tex tex="\cdot" />
+        <Labeled label={`\\Sigma^{+}\\;(${cols}\\times${rows})`}><Heat M={f.Splus} diag /></Labeled>
+        <Tex tex="\cdot" />
+        <Labeled label={`U^{\\mathsf T}\\;(${rows}\\times${rows})`}><Heat M={transpose(f.U)} /></Labeled>
+      </div>
+    </div>
+  );
+}
+
 function Labeled({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div style={{ display: 'grid', justifyItems: 'center', gap: 4 }}>
@@ -157,7 +201,7 @@ function cellColor(v: number, max: number) {
   return `color-mix(in srgb, ${v >= 0 ? 'var(--c1)' : 'var(--c2)'} ${p}%, transparent)`;
 }
 
-function Heat({ M }: { M: Mat | Vec[] }) {
+function Heat({ M, diag = false }: { M: Mat | Vec[]; diag?: boolean }) {
   const max = Math.max(1e-12, ...M.flat().map(Math.abs));
   return (
     <table style={{ borderCollapse: 'collapse', fontSize: 11, fontFamily: 'ui-monospace, monospace' }}>
@@ -165,7 +209,7 @@ function Heat({ M }: { M: Mat | Vec[] }) {
         {M.map((row, i) => (
           <tr key={i}>
             {row.map((v, j) => (
-              <td key={j} title={fmt(v, 5)} style={{ background: cellColor(v, max), padding: '2px 4px', height: 18, textAlign: 'right', border: '1px solid var(--border)' }}>
+              <td key={j} title={fmt(v, 5)} style={{ background: diag && i !== j ? 'transparent' : cellColor(v, max), color: diag && i !== j ? 'var(--muted)' : undefined, fontWeight: diag && i === j ? 600 : undefined, padding: '2px 4px', height: 18, textAlign: 'right', border: '1px solid var(--border)' }}>
                 {fmt(v, 2)}
               </td>
             ))}
