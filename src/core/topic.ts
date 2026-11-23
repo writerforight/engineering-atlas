@@ -8,6 +8,11 @@ export interface TopicMeta {
   tags: string[];
   /** Sort key on the home page (ascending); defaults to 100. */
   order?: number;
+  /**
+   * 'chapters': the page shows only the interactive part (a <Chapters> explainer)
+   * without the Intuition / Derivation / Notes sections.
+   */
+  layout?: 'sections' | 'chapters';
 }
 
 /**

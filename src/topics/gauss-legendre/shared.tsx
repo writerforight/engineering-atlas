@@ -81,3 +81,35 @@ export function yRange(fns: ReadonlyArray<(x: number) => number>, a: number, b: 
   const m = (hi - lo) * pad;
   return [lo - m, hi + m];
 }
+
+/** 4.4e-16 → "4.4·10⁻¹⁶" (0 → "0"). */
+export function pow10(x: number, digits = 1): string {
+  if (x === 0) return '0';
+  if (!Number.isFinite(x)) return String(x);
+  const e = Math.floor(Math.log10(Math.abs(x)));
+  const m = x / 10 ** e;
+  const sup = String(e).replace(/-/g, '⁻').replace(/\d/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[Number(d)]!);
+  return `${m.toFixed(digits)}·10${sup}`;
+}
+
+/** Legend entry that switches a curve on and off. */
+export function CurveToggle({
+  on, onClick, color, dash, children,
+}: { on: boolean; onClick: () => void; color: string; dash?: boolean; children: ReactNode }) {
+  return (
+    <button className="btn" aria-pressed={on} onClick={onClick} style={{ opacity: on ? 1 : 0.55 }}>
+      <i className="swatch" data-dash={dash || undefined} style={{ color }} />
+      {children}
+    </button>
+  );
+}
+
+/** Set-of-ids state helper for curve toggles. */
+export function toggle<T>(s: ReadonlySet<T>, id: T): Set<T> {
+  const n = new Set(s);
+  if (n.has(id)) n.delete(id);
+  else n.add(id);
+  return n;
+}
+
+export const MERKE = 'Merke';

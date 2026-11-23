@@ -1,13 +1,14 @@
 import { useCallback, useMemo, useState } from 'react';
 import { exactnessDegree, gaussLegendre, monicNormSq, monomialErrors, quad } from '../../core/math';
-import { Canvas, Slider, Takeaway, Tex, dot, drawGridAxes, fmtErr, makeViewport, polyline, type DrawContext } from '../../core/ui';
-import { clip } from './shared';
+import { Canvas, KeyIdentity, Slider, Takeaway, Tex, dot, drawGridAxes, makeViewport, polyline, type DrawContext } from '../../core/ui';
+import { MERKE, clip, pow10 } from './shared';
 
 const N_MAX = 40;
-const EPS = 2.220446049250313e-16;
+const EPS = Number.EPSILON;
 /** "vorab": all 40 rules computed once. */
 const RULES = Array.from({ length: N_MAX }, (_, i) => gaussLegendre(i + 1));
 const FLOOR = 1e-18;
+const sup = (e: number) => String(e).replace(/-/g, '⁻').replace(/\.5/, ',5').replace(/\d/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[Number(d)]!);
 
 /** Deterministic pseudo-random in [-1, 1]. */
 function noise(seed: number, i: number): number {
@@ -22,13 +23,12 @@ export function Ch8Exactness() {
   const [seed, setSeed] = useState(1);
   const tol = 10 ** logTol, delta = 10 ** logDelta;
   const rule = RULES[N - 1]!;
-  const errs = useMemo(() => monomialErrors(rule, 2 * N + 6), [rule, N]);
   const measured = exactnessDegree(rule, tol);
+  const errs = useMemo(() => monomialErrors(rule, Math.min(200, Math.max(2 * N + 6, measured + 4))), [rule, N, measured]);
   const degrees = useMemo(() => RULES.map((r) => exactnessDegree(r, tol)), [tol]);
   const sumW = rule.w.reduce((s, w) => s + Math.abs(w), 0);
   const pN2 = monicNormSq(N);
-  const firstOff = degrees.findIndex((m, i) => m !== 2 * (i + 1) - 1);
-
+  const roundFloor = Math.max(...errs.slice(0, 2 * N));
   const Q = quad(rule, Math.exp);
   const Qt = rule.x.reduce((s, x, i) => s + rule.w[i]! * (Math.exp(x) + delta * noise(seed, i)), 0);
 
@@ -49,70 +49,71 @@ export function Ch8Exactness() {
   }, [errs, logTol, tol, N, measured]);
 
   const drawDeg = useCallback(({ ctx, width, height, palette: pal }: DrawContext) => {
-    const vp = makeViewport(width, height, { x: [0, N_MAX + 1], y: [0, Math.max(90, ...degrees) * 1.05] }, { l: 40, r: 10, t: 12, b: 24 });
+    const vp = makeViewport(width, height, { x: [0, N_MAX + 1], y: [-2, Math.max(90, ...degrees) * 1.05] }, { l: 40, r: 10, t: 12, b: 24 });
     drawGridAxes(ctx, vp, pal, { ticks: 8, xLabel: 'N', yLabel: 'Exaktheitsgrad' });
     clip(ctx, vp, () => {
       polyline(ctx, vp, [[0, -1], [N_MAX + 1, 2 * N_MAX + 1]], pal.muted, 1.5, [6, 4]);
-      degrees.forEach((m, i) => dot(ctx, vp, [i + 1, m], m === 2 * (i + 1) - 1 ? pal.c1 : pal.c2, i + 1 === N ? 6 : 3.5));
+      degrees.forEach((m, i) => {
+        const th = 2 * (i + 1) - 1;
+        dot(ctx, vp, [i + 1, m], m === th ? pal.c1 : m > th ? pal.c2 : pal.c4, i + 1 === N ? 6 : 3.5);
+      });
     });
   }, [degrees, N]);
 
+  const verdict =
+    measured === 2 * N - 1
+      ? { cls: 'ok', text: <>gemessen = Theorie.</> }
+      : measured > 2 * N - 1
+        ? { cls: 'bad', text: <>gemessen &gt; Theorie: der echte Fehler bei x<sup>2N</sup>, ‖p<sub>N</sub>‖² = {pow10(pN2)}, liegt unter tol. Ursache ist tol, nicht Rundung.</> }
+        : { cls: 'bad', text: <>gemessen &lt; Theorie: tol liegt unter dem Rundungsniveau {pow10(roundFloor)} der Gleitkommazahlen (double, ε ≈ 2,2·10⁻¹⁶). Schon exakte Monome „scheitern“.</> };
+
   return (
     <>
-      <div className="prose">
-        <p>
-          Teori (Satz): <Tex tex="N" /> düğümlü Gauß formülü <Tex tex="2N-1" />. dereceye kadar her polinomu tam integre eder. Bunu{' '}
-          <b>ölçüyoruz</b>: <Tex tex="N=1,\dots,40" /> için formüller bir kez hesaplanır, sonra her biri monomlarla{' '}
-          <Tex tex="x^0,x^1,x^2,\dots" /> sınanır. Sapma ilk kez <Tex tex="\text{tol}" />’u geçtiği <Tex tex="k" />’da durulur:{' '}
-          <b>Exaktheitsgrad</b> <Tex tex="m=k-1" />.
-        </p>
-      </div>
+      <KeyIdentity label="Exaktheitsgrad messen">
+        <Tex block tex="m=\max\Big\{m:\ \Big|\sum_i w_i x_i^{\,k}-\int_{-1}^1x^k\,dx\Big|\le\text{tol}\ \ \forall k\le m\Big\}" />
+        <Tex block tex="\text{Theorie: }m=2N-1" />
+      </KeyIdentity>
       <div className="viz-grid">
         <div className="panel">
-          <Canvas draw={drawErr} aspect={0.55} maxHeight={330} ariaLabel="Monom hataları" />
-          <p className="canvas-caption">
-            Mavi: tol altında (tam sayılır), turuncu: tol üstünde. Kesikli turuncu çizgi tol, noktalı dikey çizgi k = 2N.
-          </p>
+          <Canvas draw={drawErr} aspect={0.55} maxHeight={330} ariaLabel="Monomfehler" />
+          <p className="canvas-caption">Blau ≤ tol, orange &gt; tol. Gestrichelt: tol. Gepunktet: k = 2N.</p>
           <Slider label="N" value={N} min={1} max={N_MAX} step={1} onChange={setN} format={(t) => String(t)} />
-          <Slider label="tol" value={logTol} min={-16} max={-4} step={0.5} onChange={setLogTol} format={(t) => `1e${t}`} />
+          <Slider label="tol" value={logTol} min={-16} max={-4} step={0.5} onChange={setLogTol} format={(t) => `10${sup(t)}`} />
         </div>
         <div className="panel">
-          <Canvas draw={drawDeg} aspect={0.55} maxHeight={330} ariaLabel="Ölçülen exaktlık derecesi" />
-          <p className="canvas-caption">Kesikli: teori 2N − 1. Mavi: uyuşuyor, turuncu: uyuşmuyor.</p>
+          <Canvas draw={drawDeg} aspect={0.55} maxHeight={330} ariaLabel="Gemessener Exaktheitsgrad" />
+          <p className="canvas-caption">Gestrichelt: 2N − 1. Blau: stimmt, orange: zu groß, violett: zu klein.</p>
           <div className="readout">
-            <span>N = {N}: ölçülen m = <b className={measured === 2 * N - 1 ? 'ok' : 'bad'}>{measured}</b>, teori 2N − 1 = {2 * N - 1}</span>
-            <span>Bu tol ile ilk sapma: {firstOff < 0 ? 'yok (N ≤ 40)' : `N = ${firstOff + 1}`}</span>
+            <span>
+              N = {N}: gemessen <b className={verdict.cls}>{measured}</b>, Theorie {2 * N - 1}
+            </span>
             <span>Konditionszahl Σ|wᵢ| = {sumW.toFixed(15)}</span>
           </div>
         </div>
       </div>
       <div className="viz-grid">
         <div className="panel readout">
-          <b>Störung: değerler bozulursa ne olur?</b>
-          <Tex block tex="|Q(\tilde f)-Q(f)|\le\sum_i|w_i|\cdot\max_i|\tilde f(x_i)-f(x_i)|" />
-          <Slider label="δ (değerlerdeki en büyük hata)" value={logDelta} min={-14} max={-1} step={0.5} onChange={setLogDelta} format={(t) => `1e${t}`} />
-          <div className="row">
-            <button className="btn" onClick={() => setSeed((s) => s + 1)}>Yeni gürültü</button>
-          </div>
-          <span>f = eˣ, N = {N}: |Q(f̃) − Q(f)| = <b>{fmtErr(Math.abs(Qt - Q))}</b> ≤ Σ|wᵢ|·δ = <b>{fmtErr(sumW * delta)}</b></span>
+          <b>Frage: Erklären Rundungsfehler die Abweichung?</b>
+          <span>Rundung × Kondition: Σ|wᵢ|·ε = <b>{pow10(sumW * EPS)}</b></span>
+          <span>Größter Fehler für k &lt; 2N (reine Rundung): <b>{pow10(roundFloor)}</b></span>
+          <span>Echter Fehler bei k = 2N: ‖p<sub>N</sub>‖² = <b>{pow10(pN2)}</b></span>
+          <span className={verdict.cls}>{verdict.text}</span>
         </div>
         <div className="panel readout">
-          <b>Soru: Yuvarlama hatası sapmayı açıklar mı?</b>
-          <span>Yuvarlama × kondisyon ≈ Σ|wᵢ|·ε = <b>{fmtErr(sumW * EPS)}</b></span>
+          <b>Störung der Werte</b>
+          <Tex block tex="|Q(\tilde f)-Q(f)|\le\sum_i|w_i|\cdot\max_i|\tilde f(x_i)-f(x_i)|" />
+          <Slider label="δ = max |f̃ − f|" value={logDelta} min={-14} max={-1} step={0.5} onChange={setLogDelta} format={(t) => `10${sup(t)}`} />
+          <div className="row">
+            <button className="btn" onClick={() => setSeed((s) => s + 1)}>Neues Rauschen</button>
+          </div>
           <span>
-            x<sup>2N</sup>’deki gerçek Gauß hatası ‖p<sub>N</sub>‖² = <b>{fmtErr(pN2)}</b> (tablodaki k = 2N: {fmtErr(errs[2 * N]!)})
-          </span>
-          <span className={pN2 < tol ? 'bad' : 'ok'}>
-            ‖p<sub>N</sub>‖²{' '}
-            {pN2 < tol
-              ? '< tol: test k = 2N’deki gerçek hatayı göremiyor, ölçülen derece teoriden büyük çıkıyor. Sebep yuvarlama değil, tol.'
-              : '> tol: k = 2N’deki hata yakalanıyor, ölçülen = teori.'}
+            f = eˣ: |Q(f̃) − Q(f)| = <b>{pow10(Math.abs(Qt - Q))}</b> ≤ Σ|wᵢ|·δ = <b>{pow10(sumW * delta)}</b>
           </span>
         </div>
       </div>
-      <Takeaway>
-        Ölçülen derece teoriden sapıyorsa suçlu yuvarlama değil: <Tex tex="\sum|w_i|\,\varepsilon\approx4\cdot10^{-16}" />. Gerçek hata{' '}
-        <Tex tex="\|p_N\|^2\sim4^{-N}" /> hızla küçülür ve <Tex tex="\text{tol}" />’un altına düşünce test onu “tam” sayar.
+      <Takeaway label={MERKE}>
+        tol zu groß → gemessen &gt; 2N − 1 (<Tex tex="\|p_N\|^2\sim4^{-N}" /> fällt unter tol). tol unter dem Rundungsniveau → gemessen &lt; 2N − 1.
+        Dazwischen stimmt die Messung mit der Theorie.
       </Takeaway>
     </>
   );

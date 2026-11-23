@@ -1,91 +1,96 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { evalPoly, gramSchmidt, inner, legendreB, texNum, type Poly } from '../../core/math';
-import { Canvas, Slider, Takeaway, Tex, drawGridAxes, fmt, makeViewport, plotFn, type DrawContext } from '../../core/ui';
-import { clip, yRange } from './shared';
+import { Canvas, KeyIdentity, Slider, Takeaway, Tex, drawGridAxes, fmt, makeViewport, polyline, type DrawContext } from '../../core/ui';
+import { CurveToggle, MERKE, clip, toggle, yRange } from './shared';
 
 const K = 8;
 const xTimes = (p: Poly): Poly => [0, ...p];
+type Curve = 'lhs' | 'next' | 'prev' | 'sum';
+const CURVES: ReadonlyArray<{ id: Curve; col: 'fg' | 'c1' | 'c2' | 'c3'; dash?: boolean }> = [
+  { id: 'lhs', col: 'fg' },
+  { id: 'next', col: 'c1' },
+  { id: 'prev', col: 'c2' },
+  { id: 'sum', col: 'c3', dash: true },
+];
 
 export function Ch3Recurrence() {
   const [n, setN] = useState(2);
+  const [show, setShow] = useState<Set<Curve>>(new Set(['lhs', 'next', 'prev', 'sum']));
   const P = useMemo(() => gramSchmidt(K).map((s) => s.p), []);
   const pn = P[n]!, pm = P[n - 1]!, pp = P[n + 1]!;
-  const xpn = xTimes(pn);
-  const num_a = inner(xpn, pn), nn = inner(pn, pn), mm = inner(pm, pm);
-  const a = num_a / nn, b = nn / mm;
+  const nn = inner(pn, pn), mm = inner(pm, pm), xa = inner(xTimes(pn), pn);
+  const b = nn / mm;
 
-  /** C[k][m] ∝ ⟨x p_m, p_k⟩ / ⟨p_k, p_k⟩: coefficient of p_k in x·p_m. */
+  const fns: Record<Curve, (x: number) => number> = useMemo(() => ({
+    lhs: (x) => x * evalPoly(pn, x),
+    next: (x) => evalPoly(pp, x),
+    prev: (x) => b * evalPoly(pm, x),
+    sum: (x) => evalPoly(pp, x) + b * evalPoly(pm, x),
+  }), [pn, pp, pm, b]);
+
   const C = useMemo(
     () => Array.from({ length: K }, (_, k) => Array.from({ length: K }, (_, m) => inner(xTimes(P[m]!), P[k]!) / inner(P[k]!, P[k]!))),
     [P],
   );
 
   const draw = useCallback(({ ctx, width, height, palette: pal }: DrawContext) => {
-    const y = yRange([(x) => x * evalPoly(pn, x), (x) => b * evalPoly(pm, x), (x) => evalPoly(pp, x)], -1, 1);
-    const vp = makeViewport(width, height, { x: [-1.05, 1.05], y }, { l: 40, r: 10, t: 12, b: 24 });
+    const vp = makeViewport(width, height, { x: [-1.05, 1.05], y: yRange(Object.values(fns), -1, 1) }, { l: 44, r: 10, t: 12, b: 24 });
     drawGridAxes(ctx, vp, pal, { ticks: 8, xLabel: 'x' });
     clip(ctx, vp, () => {
-      ctx.globalAlpha = 0.45;
-      plotFn(ctx, vp, (x) => x * evalPoly(pn, x), pal.c3, 1.6);
-      plotFn(ctx, vp, (x) => b * evalPoly(pm, x), pal.c4, 1.6);
-      ctx.globalAlpha = 1;
-      plotFn(ctx, vp, (x) => evalPoly(pp, x), pal.c1, 4);
-      ctx.setLineDash([6, 5]);
-      plotFn(ctx, vp, (x) => x * evalPoly(pn, x) - a * evalPoly(pn, x) - b * evalPoly(pm, x), pal.c2, 2);
-      ctx.setLineDash([]);
+      for (const c of CURVES) {
+        if (!show.has(c.id)) continue;
+        const pts: Array<[number, number]> = [];
+        for (let i = 0; i <= 400; i++) {
+          const x = -1.05 + (2.1 * i) / 400;
+          pts.push([x, fns[c.id](x)]);
+        }
+        polyline(ctx, vp, pts, pal[c.col], c.id === 'lhs' ? 5 : 2.5, c.dash ? [8, 6] : []);
+      }
     });
-  }, [pn, pm, pp, a, b]);
+  }, [fns, show]);
+
+  const names: Record<Curve, ReactNode> = {
+    lhs: <>x·p<sub>{n}</sub></>,
+    next: <>p<sub>{n + 1}</sub></>,
+    prev: <>b<sub>{n}</sub>·p<sub>{n - 1}</sub></>,
+    sum: <>p<sub>{n + 1}</sub> + b<sub>{n}</sub>·p<sub>{n - 1}</sub></>,
+  };
 
   return (
     <>
+      <KeyIdentity label="Drei-Term-Rekursion">
+        <Tex block tex="x\,p_n = p_{n+1} + a_n\,p_n + b_n\,p_{n-1}" />
+      </KeyIdentity>
       <div className="prose">
-        <p>
-          Her yeni polinom için bütün öncekileri çıkarmak gerekmez. <Tex tex="x\,p_n" />’in derecesi <Tex tex="n+1" />, onu
-          <Tex tex="p_0,\dots,p_{n+1}" /> cinsinden yazınca katsayılar <Tex tex="\langle x p_n,p_k\rangle" /> ile orantılı. İki gözlem
-          bunların çoğunu sıfırlar:
-        </p>
-        <ul>
-          <li>
-            <b>Derece:</b> x ile çarpmak dereceyi en fazla 1 artırır, yani <Tex tex="k>n+1" /> için katsayı 0.
-          </li>
-          <li>
-            <b>Simetri:</b> <Tex tex="\langle x p_n,p_k\rangle=\langle p_n,x p_k\rangle" />. <Tex tex="k\le n-2" /> ise{' '}
-            <Tex tex="x p_k" />’nin derecesi <Tex tex="<n" />, ve <Tex tex="p_n" /> bu tür her polinoma diktir: katsayı 0.
-          </li>
-        </ul>
-        <Tex block tex="x\,p_n = p_{n+1} + a_n\,p_n + b_n\,p_{n-1},\qquad a_n=\frac{\langle x p_n,p_n\rangle}{\langle p_n,p_n\rangle},\quad b_n=\frac{\langle p_n,p_n\rangle}{\langle p_{n-1},p_{n-1}\rangle}" />
-        <p>
-          <Tex tex="a_n" /> için iki tarafı <Tex tex="p_n" /> ile, <Tex tex="b_n" /> için <Tex tex="p_{n-1}" /> ile iç çarp; diklik diğer
-          terimleri götürür. Legendre’de simetri yüzünden <Tex tex="a_n=0" /> ve <Tex tex="b_n=\frac{n^2}{4n^2-1}" />.
-        </p>
+        <Tex block tex="\langle x p_n,p_k\rangle=\langle p_n,x p_k\rangle=0\quad\text{für }k\le n-2\qquad(\deg x p_k<n)" />
+        <Tex block tex="a_n=\frac{\langle x p_n,p_n\rangle}{\langle p_n,p_n\rangle}=0,\qquad b_n=\frac{\langle p_n,p_n\rangle}{\langle p_{n-1},p_{n-1}\rangle}=\frac{n^2}{4n^2-1}" />
       </div>
       <div className="viz-grid">
         <div className="panel">
-          <Canvas draw={draw} aspect={0.6} maxHeight={360} ariaLabel="Rekürsiyonun kontrolü" />
-          <div className="legend">
-            <span><i style={{ background: 'var(--c1)' }} />p<sub>{n + 1}</sub> (Gram-Schmidt)</span>
-            <span><i style={{ background: 'var(--c2)' }} />x·p<sub>{n}</sub> − b<sub>{n}</sub>·p<sub>{n - 1}</sub> (kesikli)</span>
-            <span><i style={{ background: 'var(--c3)' }} />x·p<sub>{n}</sub></span>
-            <span><i style={{ background: 'var(--c4)' }} />b<sub>{n}</sub>·p<sub>{n - 1}</sub></span>
+          <Canvas draw={draw} aspect={0.6} maxHeight={360} ariaLabel="Rekursion als Kurven" />
+          <div className="row">
+            {CURVES.map((c) => (
+              <CurveToggle key={c.id} on={show.has(c.id)} onClick={() => setShow(toggle(show, c.id))} color={`var(--${c.col})`} dash={c.dash}>
+                {names[c.id]}
+              </CurveToggle>
+            ))}
           </div>
+          <p className="canvas-caption">Die gestrichelte Summe liegt genau auf der dicken Kurve x·p<sub>{n}</sub>.</p>
           <Slider label="n" value={n} min={1} max={K - 1} step={1} onChange={setN} format={(t) => String(t)} />
         </div>
         <div className="panel readout">
-          <b>Sayılarla (n = {n})</b>
+          <b>n = {n}</b>
           <div className="scroll-x">
-            <Tex block tex={`a_{${n}}=\\frac{\\langle x p_{${n}},p_{${n}}\\rangle}{\\langle p_{${n}},p_{${n}}\\rangle}=\\frac{${texNum(num_a)}}{${texNum(nn)}}=${texNum(a)}`} />
-            <Tex block tex={`b_{${n}}=\\frac{\\langle p_{${n}},p_{${n}}\\rangle}{\\langle p_{${n - 1}},p_{${n - 1}}\\rangle}=\\frac{${texNum(nn)}}{${texNum(mm)}}=${texNum(b)}\\;\\overset{?}{=}\\;\\frac{${n * n}}{${4 * n * n - 1}}`} />
+            <Tex block tex={`a_{${n}}=\\frac{${texNum(xa)}}{${texNum(nn)}}=${texNum(xa / nn)},\\qquad b_{${n}}=\\frac{${texNum(nn)}}{${texNum(mm)}}=${texNum(b)}=\\frac{${n * n}}{${4 * n * n - 1}}`} />
           </div>
-          <p style={{ margin: 0 }}>
-            Formülle fark: <span className="ok">{Math.abs(b - legendreB(n)).toExponential(1)}</span>
-          </p>
-          <b style={{ marginTop: 8 }}>x·pₘ’nin pₖ cinsinden katsayıları</b>
+          <span>Abweichung von n²/(4n²−1): <span className="ok">{Math.abs(b - legendreB(n)).toExponential(0)}</span></span>
+          <b style={{ marginTop: 8 }}>Koeffizient von pₖ in x·pₘ</b>
           <div className="scroll-x">
             <table className="num-table">
               <thead>
                 <tr>
                   <th>k \ m</th>
-                  {C.map((_, m) => <th key={m}>{m}</th>)}
+                  {C.map((_, m) => <th key={m} style={{ color: m === n ? 'var(--c1)' : undefined }}>{m}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -93,7 +98,7 @@ export function Ch3Recurrence() {
                   <tr key={k}>
                     <th>{k}</th>
                     {row.map((v, m) => (
-                      <td key={m} style={{ color: Math.abs(v) < 1e-12 ? 'var(--grid)' : m === n ? 'var(--c2)' : undefined }}>
+                      <td key={m} style={{ color: Math.abs(v) < 1e-12 ? 'var(--grid)' : m === n ? 'var(--c1)' : undefined }}>
                         {Math.abs(v) < 1e-12 ? '·' : fmt(v, 2)}
                       </td>
                     ))}
@@ -104,9 +109,8 @@ export function Ch3Recurrence() {
           </div>
         </div>
       </div>
-      <Takeaway>
-        Derece argümanı alt üçgeni, simetri üst üçgeni sıfırlar; tablo üç köşegenli kalır. Her sütunda sadece{' '}
-        <Tex tex="p_{n-1},\,p_n,\,p_{n+1}" />: üç ardışık polinom.
+      <Takeaway label={MERKE}>
+        Tridiagonal: jede Spalte enthält nur <Tex tex="p_{n-1},\,p_n,\,p_{n+1}" />.
       </Takeaway>
     </>
   );

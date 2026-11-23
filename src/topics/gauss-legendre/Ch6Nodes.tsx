@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { baryEval, baryWeights, gaussLegendre, linspace, nodes } from '../../core/math';
-import { Canvas, Slider, Takeaway, Tex, dot, drawGridAxes, makeViewport, plotFn, polyline, type DrawContext } from '../../core/ui';
-import { Choice, Toggles, clip } from './shared';
+import { Canvas, KeyIdentity, Slider, Takeaway, Tex, dot, drawGridAxes, makeViewport, plotFn, type DrawContext } from '../../core/ui';
+import { Choice, CurveToggle, MERKE, clip, pow10, toggle } from './shared';
 
 type Kind = 'equi' | 'cheb' | 'leg';
 const FUNCS = [
@@ -15,14 +15,14 @@ type FId = (typeof FUNCS)[number]['id'];
 const KINDS: ReadonlyArray<{ id: Kind; label: string; col: 'c1' | 'c2' | 'c4' }> = [
   { id: 'equi', label: 'äquidistant', col: 'c2' },
   { id: 'cheb', label: 'Tschebyscheff', col: 'c4' },
-  { id: 'leg', label: 'Legendre (J’nin özdeğerleri)', col: 'c1' },
+  { id: 'leg', label: 'Legendre (Eigenwerte von J)', col: 'c1' },
 ];
 const GRID = linspace(-1, 1, 400);
 
 export function Ch6Nodes() {
   const [fid, setFid] = useState<FId>('runge');
   const [n, setN] = useState(12);
-  const [show, setShow] = useState<Set<Kind>>(new Set(['equi', 'cheb', 'leg']));
+  const [show, setShow] = useState<Set<Kind | 'f'>>(new Set(['f', 'equi', 'cheb', 'leg']));
   const f = FUNCS.find((t) => t.id === fid)!.f;
 
   const res = useMemo(() => {
@@ -42,52 +42,53 @@ export function Ch6Nodes() {
     const vp = makeViewport(width, height, { x: [-1.05, 1.05], y: [lo - m, hi + m] }, { l: 36, r: 10, t: 12, b: 24 });
     drawGridAxes(ctx, vp, pal, { ticks: 8, xLabel: 'x' });
     clip(ctx, vp, () => {
-      plotFn(ctx, vp, f, pal.fg, 2.5);
+      if (show.has('f')) plotFn(ctx, vp, f, pal.fg, 3);
       KINDS.forEach((k, row) => {
         if (!show.has(k.id)) return;
         const col = pal[k.col];
-        plotFn(ctx, vp, res[k.id].p, col, 1.8, 600);
-        const yb = vp.y.invert(vp.bottom - 6 - row * 9);
-        res[k.id].x.forEach((xi) => dot(ctx, vp, [xi, yb], col, 3.2));
+        plotFn(ctx, vp, res[k.id].p, col, 2, 600);
+        const yb = vp.y.invert(vp.bottom - 7 - row * 10);
+        res[k.id].x.forEach((xi) => dot(ctx, vp, [xi, yb], col, 3.5));
       });
-      polyline(ctx, vp, [[-1, lo - m], [-1, hi + m]], pal.grid, 1);
     });
   }, [f, res, show]);
 
   return (
     <>
-      <div className="prose">
-        <p>
-          <Tex tex="J" />’nin özdeğerleri <Tex tex="p_N" />’in kökleridir. Bundan sonra bunlar bizim <b>Stützstellen</b>’imiz (düğümlerimiz)
-          olacak. Önce bir yan soru: aynı düğümlerle bir fonksiyonu <b>interpole</b> edersek (barisentrik formül, baryzentrisch) eşit
-          aralıklı ve Tschebyscheff düğümlerine göre nasıl davranırlar? Legendre kökleri de Tschebyscheff gibi uçlarda sıklaşır.
-        </p>
-      </div>
+      <KeyIdentity label="Ab jetzt">
+        <Tex block tex="\text{Stützstellen }x_i=\text{Eigenwerte von }J_N=\text{Nullstellen von }p_N" />
+      </KeyIdentity>
       <div className="panel">
-        <Canvas draw={draw} aspect={0.5} maxHeight={420} ariaLabel="Üç düğüm seçimiyle interpolasyon" />
-        <p className="canvas-caption">Kalın çizgi f. Alttaki nokta sıraları düğümlerin yerleri.</p>
+        <Canvas draw={draw} aspect={0.5} maxHeight={420} ariaLabel="Interpolation mit drei Stützstellenwahlen" />
+        <p className="canvas-caption">Punktreihen unten: Lage der Stützstellen. Baryzentrische Interpolation.</p>
         <div className="viz-grid" style={{ marginTop: 8 }}>
           <div className="controls">
             <Choice value={fid} onChange={setFid} items={FUNCS.map((t) => ({ id: t.id, label: t.label }))} />
-            <Slider label="Düğüm sayısı N" value={n} min={2} max={30} step={1} onChange={setN} format={(t) => String(t)} />
-            <Toggles value={show} onChange={setShow} items={KINDS.map((k) => ({ id: k.id, label: k.label, color: `var(--${k.col})` }))} />
+            <Slider label="Anzahl Stützstellen N" value={n} min={2} max={30} step={1} onChange={setN} format={(t) => String(t)} />
+            <div className="row">
+              <CurveToggle on={show.has('f')} onClick={() => setShow(toggle(show, 'f'))} color="var(--fg)">f</CurveToggle>
+              {KINDS.map((k) => (
+                <CurveToggle key={k.id} on={show.has(k.id)} onClick={() => setShow(toggle(show, k.id))} color={`var(--${k.col})`}>
+                  {k.label}
+                </CurveToggle>
+              ))}
+            </div>
           </div>
           <table className="num-table">
-            <thead><tr><th style={{ textAlign: 'left' }}>Düğümler</th><th>max |p − f|</th></tr></thead>
+            <thead><tr><th style={{ textAlign: 'left' }}>Stützstellen</th><th>max |p − f|</th></tr></thead>
             <tbody>
               {KINDS.map((k) => (
                 <tr key={k.id}>
                   <td style={{ textAlign: 'left', color: `var(--${k.col})` }}>{k.label}</td>
-                  <td>{res[k.id].err.toExponential(2)}</td>
+                  <td>{pow10(res[k.id].err, 2)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
-      <Takeaway>
-        Legendre düğümleri uçlarda sıklaştığı için Runge salınımı yapmaz ve interpolasyonda Tschebyscheff kadar iyi davranır. Ama asıl
-        işleri bir sonraki bölümde: integral.
+      <Takeaway label={MERKE}>
+        Legendre-Knoten häufen sich an den Rändern wie Tschebyscheff-Knoten: kein Runge-Effekt.
       </Takeaway>
     </>
   );

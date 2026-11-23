@@ -12,3 +12,4 @@ export * from './format';
 export * from './useHashParam';
 export * from './view3d';
 export * from './Chapters';
+export * from './MatrixView';

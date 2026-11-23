@@ -4,7 +4,6 @@
  * used on the topic page (exactness degree, moment system, cell widths).
  * Polynomials are coefficient arrays, lowest power first.
  */
-import { symEig } from './linearId';
 import type { Mat } from './matrix';
 
 export type Poly = number[];
@@ -118,10 +117,71 @@ export interface Rule {
   w: number[];
 }
 
+/**
+ * Eigen-decomposition of a symmetric tridiagonal matrix (diagonal d, off-diagonal e,
+ * e[i] couples i and i+1) by the implicit QL algorithm. Accurate to machine
+ * precision, unlike the cyclic Jacobi sweep used for dense matrices.
+ */
+export function tridiagEig(diag: readonly number[], off: readonly number[]): { values: number[]; V: Mat } {
+  const n = diag.length;
+  const d = diag.slice();
+  const e = [...off, 0].slice(0, n);
+  while (e.length < n) e.push(0);
+  const z: Mat = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)));
+  const EPS = Number.EPSILON;
+  for (let l = 0; l < n; l++) {
+    let iter = 0;
+    let m: number;
+    do {
+      for (m = l; m < n - 1; m++) {
+        const dd = Math.abs(d[m]!) + Math.abs(d[m + 1]!);
+        if (Math.abs(e[m]!) <= EPS * dd) break;
+      }
+      if (m !== l) {
+        if (iter++ === 60) throw new Error('tridiagEig: no convergence');
+        let g = (d[l + 1]! - d[l]!) / (2 * e[l]!);
+        let r = Math.hypot(g, 1);
+        g = d[m]! - d[l]! + e[l]! / (g + (g >= 0 ? r : -r));
+        let s = 1, c = 1, p = 0;
+        let i: number;
+        for (i = m - 1; i >= l; i--) {
+          let f = s * e[i]!;
+          const b = c * e[i]!;
+          r = Math.hypot(f, g);
+          e[i + 1] = r;
+          if (r === 0) {
+            d[i + 1]! -= p;
+            e[m] = 0;
+            break;
+          }
+          s = f / r;
+          c = g / r;
+          g = d[i + 1]! - p;
+          r = (d[i]! - g) * s + 2 * c * b;
+          p = s * r;
+          d[i + 1] = g + p;
+          g = c * r - b;
+          for (let k = 0; k < n; k++) {
+            f = z[k]![i + 1]!;
+            z[k]![i + 1] = s * z[k]![i]! + c * f;
+            z[k]![i] = c * z[k]![i]! - s * f;
+          }
+        }
+        if (r === 0 && i >= l) continue;
+        d[l]! -= p;
+        e[l] = g;
+        e[m] = 0;
+      }
+    } while (m !== l);
+  }
+  return { values: d, V: z };
+}
+
 /** Golub–Welsch: nodes = eigenvalues of J_N, weights = 2 · (first eigenvector component)². */
 export function gaussLegendre(N: number): Rule & { V: Mat } {
   if (N === 1) return { x: [0], w: [2], V: [[1]] };
-  const { values, V } = symEig(jacobiMatrix(N));
+  const beta = Array.from({ length: N - 1 }, (_, k) => 1 / Math.sqrt(4 - 1 / ((k + 1) * (k + 1))));
+  const { values, V } = tridiagEig(Array(N).fill(0), beta);
   const order = values.map((_, i) => i).sort((i, j) => values[i]! - values[j]!);
   return {
     x: order.map((i) => values[i]!),

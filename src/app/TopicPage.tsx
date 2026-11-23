@@ -83,17 +83,23 @@ export function TopicPage({ slug }: { slug: string }) {
             </span>
           ))}
         </div>
-        <nav className="toc" aria-label="Bölümler">
+        {topic.meta.layout !== 'chapters' && <nav className="toc" aria-label="Bölümler">
           {SECTIONS.map((s, i) => (
             <a key={s.id} href={`#${s.id}`} onClick={jump(s.id)}>
               {i + 1}. {s.title}
             </a>
           ))}
-        </nav>
+        </nav>}
       </header>
       {error && <p className="bad">Konu yüklenemedi: {error}</p>}
       {!mods && !error && <p style={{ color: 'var(--muted)' }}>Yükleniyor…</p>}
+      {mods && topic.meta.layout === 'chapters' && (
+        <div id="etkilesim" className="section" style={{ scrollMarginTop: 72 }}>
+          <mods.Viz />
+        </div>
+      )}
       {mods &&
+        topic.meta.layout !== 'chapters' &&
         SECTIONS.map((s, i) => {
           const Part = parts[s.id];
           return (

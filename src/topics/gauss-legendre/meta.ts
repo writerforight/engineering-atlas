@@ -1,9 +1,10 @@
 import type { TopicMeta } from '../../core/topic';
 
 export const meta: TopicMeta = {
-  title: 'Gauß-Legendre kuadratürü: Gram-Schmidt’ten Jacobi matrisine',
+  title: 'Gauß-Legendre-Quadratur: von Gram-Schmidt zur Jacobi-Matrix',
   summary:
-    'Sekiz bölümde: dik polinom ailesi, Gram-Schmidt, üç terimli rekürsiyon, bir sütun fazla matris, simetrik J = D·T·D⁻¹, kökler = düğümler, kuadratür ağırlıkları ve Exaktheitsgrad deneyi (tol, Konditionszahl).',
-  tags: ['kuadratür', 'Legendre', 'Gram-Schmidt', 'özdeğer', 'Golub-Welsch', 'sayısal analiz'],
+    'Acht Kapitel: orthogonale Polynome, Gram-Schmidt, Drei-Term-Rekursion, Matrixform, J = D·T·D⁻¹, Nullstellen als Stützstellen, Quadraturgewichte und das Exaktheitsgrad-Experiment (tol, Konditionszahl). Auf Deutsch.',
+  tags: ['Quadratur', 'Legendre', 'Gram-Schmidt', 'Eigenwerte', 'Golub-Welsch', 'Numerik', 'Deutsch'],
   order: 29,
+  layout: 'chapters',
 };

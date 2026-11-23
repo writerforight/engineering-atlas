@@ -38,6 +38,16 @@ describe('gaussQuad', () => {
     expect(Math.min(...g40.w)).toBeGreaterThan(0);
   });
 
+  it('weights are accurate to rounding level up to N = 40', () => {
+    for (const N of [10, 25, 40]) {
+      const g = gaussLegendre(N);
+      for (let k = 0; k < 2 * N; k++) {
+        const q = g.x.reduce((s, x, i) => s + g.w[i]! * x ** k, 0);
+        expect(Math.abs(q - (k % 2 ? 0 : 2 / (k + 1)))).toBeLessThan(1e-14);
+      }
+    }
+  });
+
   it('exactness degree is 2N − 1', () => {
     for (const N of [1, 2, 5, 10, 15]) expect(exactnessDegree(gaussLegendre(N), 1e-10)).toBe(2 * N - 1);
   });
