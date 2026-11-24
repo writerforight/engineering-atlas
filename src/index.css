@@ -802,6 +802,21 @@ footer {
 }
 
 /* Python code next to a chapter (gauss-legendre) */
+:root {
+  --py-w: min(620px, 94vw);
+}
+body {
+  transition: padding-right 0.2s ease;
+}
+@media (min-width: 1000px) {
+  :root {
+    --py-w: min(620px, 44vw);
+  }
+  /* drawer open: the page shrinks to the space left of it and centres there */
+  html[data-code-open] body {
+    padding-right: var(--py-w);
+  }
+}
 .py-snippet {
   margin-top: 18px;
   border: 1px solid var(--border);
@@ -878,7 +893,7 @@ footer {
   top: 0;
   right: 0;
   z-index: 50;
-  width: min(620px, 94vw);
+  width: var(--py-w);
   height: 100vh;
   height: 100dvh;
   display: flex;

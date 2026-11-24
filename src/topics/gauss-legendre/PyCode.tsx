@@ -139,6 +139,12 @@ export function CodeDrawer() {
     bodyRef.current?.querySelector(`[data-line="${r[0]}"]`)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }, [open, r]);
 
+  // Wide screens: the page makes room for the drawer and re-centres in the space left of it (see CSS).
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-code-open', open);
+    return () => document.documentElement.removeAttribute('data-code-open');
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
