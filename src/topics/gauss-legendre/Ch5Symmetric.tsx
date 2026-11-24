@@ -4,16 +4,17 @@ import {
   Canvas, KeyIdentity, MatrixView, Slider, Takeaway, Tex, dot, fmt, label, makeViewport, polyline,
   type DrawContext, type MatrixCell,
 } from '../../core/ui';
-import { MERKE, pow10 } from './shared';
+import { Choice, MERKE, pow10 } from './shared';
 
 export function Ch5Symmetric() {
   const [N, setN] = useState(4);
-  const [t, setT] = useState(0);
+  const [which, setWhich] = useState<'T' | 'J'>('T');
+  const t = which === 'J' ? 1 : 0;
   const T = useMemo(() => recurrenceT(N), [N]);
   const d = useMemo(() => scalingD(N), [N]);
   const lam = useMemo(() => gaussLegendre(N).x, [N]);
   const dt = d.map((v) => v ** t);
-  /** M(t) = D^t T D^{-t}: t = 0 is T, t = 1 is J. */
+  /** Shown matrix: T, or J = D T D⁻¹. */
   const M = T.map((r, i) => r.map((v, j) => (dt[i]! * v) / dt[j]!));
   const asym = Math.max(...M.flatMap((r, i) => r.map((v, j) => Math.abs(v - M[j]![i]!))));
   const residual = Math.max(
@@ -49,21 +50,25 @@ export function Ch5Symmetric() {
       </KeyIdentity>
       <div className="viz-grid">
         <div className="panel">
-          <MatrixView cells={cells} label={<>M(t) = D<sup>t</sup> T D<sup>−t</sup> — t = 0: T, t = 1: J</>} />
-          <Slider label="Übergang t: T → J" value={t} min={0} max={1} step={0.01} onChange={setT} format={(s) => s.toFixed(2)} />
+          <MatrixView cells={cells} label={which === 'T' ? <>T (vorher)</> : <>J = D T D<sup>−1</sup> (nachher)</>} />
+          <Choice
+            value={which}
+            onChange={setWhich}
+            items={[{ id: 'T', label: <>vorher: T</> }, { id: 'J', label: <>nachher: J = D T D<sup>−1</sup></> }]}
+          />
           <Slider label="N" value={N} min={2} max={6} step={1} onChange={setN} format={(s) => String(s)} />
           <Canvas draw={draw} aspect={0.16} maxHeight={90} ariaLabel="Eigenwerte auf der Zahlengerade" />
-          <p className="canvas-caption">Eigenwerte: bewegen sich nicht, egal wie t steht.</p>
+          <p className="canvas-caption">Eigenwerte: für T und J dieselben.</p>
         </div>
         <div className="panel readout">
           <span>
-            Asymmetrie max |M − Mᵀ| = <b className={asym < 1e-12 ? 'ok' : 'bad'}>{asym < 1e-12 ? '0 (symmetrisch)' : fmt(asym, 4)}</b>
+            Asymmetrie max |{which} − {which}ᵀ| = <b className={asym < 1e-12 ? 'ok' : 'bad'}>{asym < 1e-12 ? '0 (symmetrisch)' : fmt(asym, 4)}</b>
           </span>
           <span>
-            Eigenwert-Probe max ‖M·Dᵗp(λ) − λ·Dᵗp(λ)‖ = <b className="ok">{pow10(residual)}</b>
+            Eigenwert-Probe max ‖{which}·v − λ·v‖, v = {which === 'T' ? 'p(λ)' : 'D·p(λ)'} = <b className="ok">{pow10(residual)}</b>
           </span>
           <span>Eigenwerte: {lam.map((l) => l.toFixed(4)).join(', ')}</span>
-          <span style={{ color: 'var(--muted)' }}>Eigenvektor von M(t): Dᵗ·p(λ) — er ändert sich mit t, λ nicht.</span>
+          <span style={{ color: 'var(--muted)' }}>Eigenvektor: p(λ) bei T, D·p(λ) bei J — λ bleibt gleich.</span>
         </div>
       </div>
       <Takeaway label={MERKE}>
