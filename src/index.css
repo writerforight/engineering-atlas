@@ -800,3 +800,101 @@ footer {
   font-size: 15px;
   z-index: 1;
 }
+
+/* Python code next to a chapter (gauss-legendre) */
+.py-snippet {
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  overflow: hidden;
+}
+.py-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-sunk);
+}
+.py-code {
+  margin: 0;
+  padding: 8px 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-x: auto;
+  tab-size: 4;
+}
+.py-line {
+  display: flex;
+  border-left: 3px solid transparent;
+  padding-right: 12px;
+}
+.py-line[data-active] {
+  background: var(--info-bg);
+  border-left-color: var(--c1);
+}
+.py-ln {
+  flex: none;
+  width: 3.2em;
+  padding-right: 1em;
+  text-align: right;
+  color: var(--axis);
+  user-select: none;
+}
+.py-src {
+  white-space: pre;
+}
+.py-kw { color: var(--c4); font-weight: 600; }
+.py-fn { color: var(--c1); font-weight: 600; }
+.py-bi { color: var(--c1); }
+.py-str { color: var(--c3); }
+.py-num { color: var(--c2); }
+.py-com { color: var(--muted); font-style: italic; }
+.py-tab {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) rotate(180deg);
+  writing-mode: vertical-rl;
+  z-index: 40;
+  padding: 12px 6px;
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: var(--radius) 0 0 var(--radius);
+  background: var(--bg-elev);
+  color: var(--c1);
+  font: 600 13px var(--mono);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
+}
+.py-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 50;
+  width: min(620px, 94vw);
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elev);
+  border-left: 1px solid var(--border);
+  box-shadow: -6px 0 24px rgb(0 0 0 / 0.18);
+  transform: translateX(105%);
+  transition: transform 0.2s ease;
+  visibility: hidden;
+}
+.py-drawer[data-open] {
+  transform: none;
+  visibility: visible;
+}
+.py-full {
+  flex: 1;
+  overflow: auto;
+}

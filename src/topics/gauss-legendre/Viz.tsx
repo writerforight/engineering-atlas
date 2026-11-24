@@ -1,4 +1,6 @@
+import { useMemo, useState } from 'react';
 import { CHAPTER_LABELS_DE, Chapters, type Chapter } from '../../core/ui';
+import { ChapterCode, CodeCtx, CodeDrawer } from './PyCode';
 import { Ch1Orthogonal } from './Ch1Orthogonal';
 import { Ch2GramSchmidt } from './Ch2GramSchmidt';
 import { Ch3Recurrence } from './Ch3Recurrence';
@@ -19,6 +21,17 @@ const CHAPTERS: Chapter[] = [
   { id: 'exaktheitsgrad', title: 'Exaktheitsgrad', lead: 'Messung gegen Theorie, tol und Konditionszahl.', render: () => <Ch8Exactness /> },
 ];
 
+// Every chapter shows its lines of the Python solution below the content.
+const WITH_CODE: Chapter[] = CHAPTERS.map((c) => ({ ...c, render: () => <ChapterCode id={c.id}>{c.render()}</ChapterCode> }));
+
 export default function Viz() {
-  return <Chapters items={CHAPTERS} labels={CHAPTER_LABELS_DE} />;
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(CHAPTERS[0]!.id);
+  const ctx = useMemo(() => ({ open, setOpen, active, setActive }), [open, active]);
+  return (
+    <CodeCtx.Provider value={ctx}>
+      <Chapters items={WITH_CODE} labels={CHAPTER_LABELS_DE} />
+      <CodeDrawer />
+    </CodeCtx.Provider>
+  );
 }
