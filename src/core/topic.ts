@@ -13,6 +13,10 @@ export interface TopicMeta {
    * without the Intuition / Derivation / Notes sections.
    */
   layout?: 'sections' | 'chapters';
+  /** Language of the page content itself (default 'tr'). */
+  contentLang?: 'tr' | 'de';
+  /** German title / summary / tags, shown when the site language is German. */
+  de?: { title: string; summary: string; tags?: string[] };
 }
 
 /**

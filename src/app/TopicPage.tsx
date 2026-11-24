@@ -2,13 +2,9 @@ import { useEffect, useState, type ComponentType } from 'react';
 import type { TheoryModule } from '../core/topic';
 import { hashParams } from '../core/ui/useHashParam';
 import { findTopic } from './registry';
+import { UI, localMeta, useLang } from '../core/i18n';
 
-const SECTIONS = [
-  { id: 'sezgi', title: 'Sezgi' },
-  { id: 'etkilesim', title: 'Etkileşimli görsel' },
-  { id: 'turetme', title: 'Adım adım türetme' },
-  { id: 'yorum', title: 'Yorum ve genelleme' },
-] as const;
+const SECTIONS = [{ id: 'sezgi' }, { id: 'etkilesim' }, { id: 'turetme' }, { id: 'yorum' }] as const;
 
 interface Loaded {
   Viz: ComponentType;
@@ -17,6 +13,8 @@ interface Loaded {
 
 export function TopicPage({ slug }: { slug: string }) {
   const topic = findTopic(slug);
+  const { lang } = useLang();
+  const m = topic ? localMeta(topic.meta, lang) : null;
   const [loaded, setLoaded] = useState<{ slug: string; mods: Loaded } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,16 +39,16 @@ export function TopicPage({ slug }: { slug: string }) {
   }, [ready]);
 
   useEffect(() => {
-    document.title = topic ? `${topic.meta.title} · Engineering Atlas` : 'Engineering Atlas';
+    document.title = m ? `${m.title} · Engineering Atlas` : 'Engineering Atlas';
     return () => {
       document.title = 'Engineering Atlas';
     };
-  }, [topic]);
+  }, [m?.title]);
 
-  if (!topic) {
+  if (!topic || !m) {
     return (
       <p>
-        Konu bulunamadı. <a href="#/">Ana sayfaya dön</a>
+        {UI.notFound[lang]} <a href="#/">{UI.home[lang]}</a>
       </p>
     );
   }
@@ -71,28 +69,29 @@ export function TopicPage({ slug }: { slug: string }) {
   return (
     <article>
       <a className="back" href="#/">
-        ← Tüm konular
+        {UI.back[lang]}
       </a>
       <header className="topic-head">
-        <h1>{topic.meta.title}</h1>
-        <p className="summary">{topic.meta.summary}</p>
+        <h1>{m.title}</h1>
+        <p className="summary">{m.summary}</p>
         <div className="tags">
-          {topic.meta.tags.map((x) => (
+          {m.tags.map((x) => (
             <span key={x} className="tag">
               {x}
             </span>
           ))}
         </div>
-        {topic.meta.layout !== 'chapters' && <nav className="toc" aria-label="Bölümler">
+        {topic.meta.layout !== 'chapters' && <nav className="toc" aria-label={UI.sectionsLabel[lang]}>
           {SECTIONS.map((s, i) => (
             <a key={s.id} href={`#${s.id}`} onClick={jump(s.id)}>
-              {i + 1}. {s.title}
+              {i + 1}. {UI.sections[lang][s.id]}
             </a>
           ))}
         </nav>}
+        {lang !== (topic.meta.contentLang ?? 'tr') && UI.contentNote[lang] && <p className="content-note">{UI.contentNote[lang]}</p>}
       </header>
-      {error && <p className="bad">Konu yüklenemedi: {error}</p>}
-      {!mods && !error && <p style={{ color: 'var(--muted)' }}>Yükleniyor…</p>}
+      {error && <p className="bad">{UI.loadError[lang]} {error}</p>}
+      {!mods && !error && <p style={{ color: 'var(--muted)' }}>{UI.loading[lang]}</p>}
       {mods && topic.meta.layout === 'chapters' && (
         <div id="etkilesim" className="section" style={{ scrollMarginTop: 72 }}>
           <mods.Viz />
@@ -106,7 +105,7 @@ export function TopicPage({ slug }: { slug: string }) {
             <section key={s.id} id={s.id} className="section" style={{ scrollMarginTop: 72 }}>
               <h2>
                 <span className="num">0{i + 1}</span>
-                {s.title}
+                {UI.sections[lang][s.id]}
               </h2>
               {Part && <Part />}
             </section>

@@ -6,4 +6,5 @@ export const meta: TopicMeta = {
   summary: 'Ana sayfa kartında görünen bir iki cümlelik özet.',
   tags: ['etiket'],
   order: 100,
+  de: { title: 'Thementitel', summary: 'Ein bis zwei Sätze für die Karte auf der Startseite.', tags: ['Schlagwort'] },
 };

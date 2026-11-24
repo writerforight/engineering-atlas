@@ -35,4 +35,12 @@ describe('topic registry', () => {
     expect(slugs).toContain('complex-structure');
     expect(slugs).toContain('laplace-integration');
   });
+
+  it('every shipped topic has a German title and summary', async () => {
+    const { topics } = await import('./registry');
+    for (const t of topics) {
+      expect(t.meta.de?.title, t.slug).toBeTruthy();
+      expect(t.meta.de?.summary, t.slug).toBeTruthy();
+    }
+  });
 });

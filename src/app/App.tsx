@@ -1,14 +1,14 @@
 import { useEffect } from 'react';
 import { useTheme } from '../core/ui/theme';
+import { LANGS, UI, useLang } from '../core/i18n';
 import { Home } from './Home';
 import { TopicPage } from './TopicPage';
 import { useHashRoute } from './useHashRoute';
 
-const THEME_LABEL = { system: 'Tema: sistem', light: 'Tema: açık', dark: 'Tema: koyu' } as const;
-
 export function App() {
   const route = useHashRoute();
   const { choice, cycle } = useTheme();
+  const { lang, setLang } = useLang();
   const topicMatch = /^\/topic\/([^/?#]+)/.exec(route);
 
   const slug = topicMatch?.[1];
@@ -27,15 +27,25 @@ export function App() {
             </svg>
             Engineering Atlas
           </a>
-          <button className="icon-btn" onClick={cycle} title="Temayı değiştir">
-            {THEME_LABEL[choice]}
-          </button>
+          <div className="header-actions">
+            <div className="lang-switch" role="group" aria-label={UI.langTitle[lang]}>
+              {LANGS.map((l) => (
+                <button key={l} className="icon-btn" aria-pressed={l === lang} onClick={() => setLang(l)} lang={l}>
+                  {l.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <button className="icon-btn" onClick={cycle} title={UI.themeTitle[lang]}>
+              <span className="theme-prefix">{UI.themePrefix[lang]} </span>
+              {UI.theme[lang][choice]}
+            </button>
+          </div>
         </div>
       </header>
       <main className="container">{slug ? <TopicPage slug={slug} /> : <Home />}</main>
       <footer>
         <div className="container">
-          MIT lisanslı · Statik site, sunucu yok · Kaynak kodu GitHub’da
+          {UI.footer[lang]}
         </div>
       </footer>
     </>

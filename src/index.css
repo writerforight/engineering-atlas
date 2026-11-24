@@ -913,3 +913,43 @@ body {
   flex: 1;
   overflow: auto;
 }
+
+/* header: language switch next to the theme button */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lang-switch {
+  display: flex;
+  gap: 2px;
+}
+.lang-switch .icon-btn {
+  padding-left: 9px;
+  padding-right: 9px;
+  font-weight: 600;
+}
+.lang-switch .icon-btn[aria-pressed='true'] {
+  border-color: var(--c1);
+  color: var(--c1);
+}
+.content-note {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+.site-header .icon-btn,
+.site-header .brand {
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .site-header .icon-btn {
+    padding: 0 8px;
+  }
+  .header-actions {
+    gap: 4px;
+  }
+  .theme-prefix {
+    display: none;
+  }
+}
